@@ -12,7 +12,7 @@ import { PublicationCalendarWidget } from './publication-calendar-widget'
 import { AnalyticsWidget } from './analytics-widget'
 import { YouTubeConnectWidget } from './youtube-connect-widget'
 import { BulkManagementWidget } from './bulk-management-widget'
-import { PlayCircle, Lightbulb, Calendar, BarChart3, LogOut, User } from 'lucide-react'
+import { PlayCircle, Lightbulb, Calendar, BarChart3, LogOut, User, Settings } from 'lucide-react'
 
 interface DashboardProps {
   user: any
@@ -105,6 +105,17 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
                 )}
                 Genereer Nieuwe Ideeën
               </Button>
+              
+              {user?.role === 'admin' && (
+                <Button
+                  onClick={() => window.open('/admin', '_blank')}
+                  variant="outline"
+                  className="border-red-200 text-red-600 hover:bg-red-50"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Admin Panel
+                </Button>
+              )}
               
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
