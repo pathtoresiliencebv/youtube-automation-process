@@ -22,6 +22,26 @@ interface DashboardProps {
 export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
   const [isGenerating, setIsGenerating] = useState(false)
 
+  // Get real data from Convex
+  const allVideoIdeas = useQuery(
+    api.content.getVideoIdeasByUser,
+    user ? { userId: user.id } : 'skip'
+  )
+
+  // Calculate metrics from real data
+  const pendingIdeas = allVideoIdeas?.filter(idea => idea.status === 'pending_approval') || []
+  const inProduction = allVideoIdeas?.filter(idea => 
+    ['approved', 'script_generated', 'video_creating', 'video_completed', 'uploading'].includes(idea.status)
+  ) || []
+  const scheduled = allVideoIdeas?.filter(idea => idea.status === 'scheduled') || []
+  const published = allVideoIdeas?.filter(idea => idea.status === 'published') || []
+  
+  // Calculate average performance score
+  const publishedWithScores = published.filter(idea => idea.performanceScore > 0)
+  const avgPerformance = publishedWithScores.length > 0 
+    ? publishedWithScores.reduce((sum, idea) => sum + idea.performanceScore, 0) / publishedWithScores.length
+    : 0
+
   const handleGenerateIdeas = async () => {
     if (!user) return
     
@@ -118,7 +138,9 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
               <Lightbulb className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">8</div>
+              <div className="text-2xl font-bold">
+                {allVideoIdeas === undefined ? '...' : pendingIdeas.length}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Wacht op goedkeuring
               </p>
@@ -133,7 +155,9 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
               <PlayCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div>
+              <div className="text-2xl font-bold">
+                {allVideoIdeas === undefined ? '...' : inProduction.length}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Video's worden gemaakt
               </p>
@@ -148,7 +172,9 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
+              <div className="text-2xl font-bold">
+                {allVideoIdeas === undefined ? '...' : scheduled.length}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Klaar voor publicatie
               </p>
@@ -163,7 +189,10 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">94%</div>
+              <div className="text-2xl font-bold">
+                {allVideoIdeas === undefined ? '...' : Math.round(avgPerformance)}
+                {allVideoIdeas !== undefined && avgPerformance > 0 && '%'}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Gemiddelde succes score
               </p>
