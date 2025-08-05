@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, query } from "convex/server";
+import { internalMutation, query } from "./_generated/server";
 
 export const create: any = internalMutation({
   args: {

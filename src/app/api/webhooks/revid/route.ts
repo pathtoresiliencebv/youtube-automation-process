@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '../../../../../convex/_generated/api';
 
-// Mock Convex client for build
-const convex = {
-  action: () => Promise.resolve(null)
-} as any;
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,8 +45,8 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Handle successful video creation (disabled for build)
-        await convex.action({
+        // Handle successful video creation
+        await convex.action(api.revid.handleWebhook, {
           jobId,
           status: 'completed',
           videoUrl,
@@ -58,8 +57,8 @@ export async function POST(request: NextRequest) {
 
       case 'failed':
       case 'error':
-        // Handle failed video creation (disabled for build)
-        await convex.action({
+        // Handle failed video creation
+        await convex.action(api.revid.handleWebhook, {
           jobId,
           status: 'failed',
           error: error || 'Video creation failed',

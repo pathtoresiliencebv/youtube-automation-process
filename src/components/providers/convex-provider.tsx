@@ -1,12 +1,10 @@
 'use client'
 
+import { ConvexProvider, ConvexReactClient } from 'convex/react'
 import { ReactNode } from 'react'
 
-// Mock ConvexProvider for build
-const MockConvexProvider = ({ children }: { children: ReactNode }) => {
-  return <div>{children}</div>
-}
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
-  return <MockConvexProvider>{children}</MockConvexProvider>
+  return <ConvexProvider client={convex}>{children}</ConvexProvider>
 }
