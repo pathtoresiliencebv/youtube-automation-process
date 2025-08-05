@@ -11,6 +11,7 @@ import { ProductionPipelineWidget } from './production-pipeline-widget'
 import { PublicationCalendarWidget } from './publication-calendar-widget'
 import { AnalyticsWidget } from './analytics-widget'
 import { YouTubeConnectWidget } from './youtube-connect-widget'
+import { BulkManagementWidget } from './bulk-management-widget'
 import { PlayCircle, Lightbulb, Calendar, BarChart3, LogOut, User } from 'lucide-react'
 
 interface DashboardProps {
@@ -214,11 +215,16 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
         </div>
 
         {/* Widgets Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <VideoIdeasWidget user={user} />
           <ProductionPipelineWidget user={user} />
           <PublicationCalendarWidget user={user} />
           <AnalyticsWidget user={user} />
+        </div>
+
+        {/* Bulk Management Section */}
+        <div className="grid grid-cols-1 gap-6">
+          <BulkManagementWidget user={user} />
         </div>
       </main>
     </div>
