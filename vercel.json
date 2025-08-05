@@ -4,18 +4,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "outputDirectory": ".next",
-  "env": {
-    "CONVEX_DEPLOYMENT": "@convex-deployment",
-    "NEXT_PUBLIC_CONVEX_URL": "@convex-url",
-    "DATABASE_URL": "@database-url",
-    "YOUTUBE_CLIENT_ID": "@youtube-client-id",
-    "YOUTUBE_CLIENT_SECRET": "@youtube-client-secret",
-    "GEMINI_API_KEY": "@gemini-api-key",
-    "REVID_API_KEY": "@revid-api-key",
-    "NEXT_PUBLIC_APP_URL": "@app-url",
-    "NEXTAUTH_URL": "@nextauth-url",
-    "NEXTAUTH_SECRET": "@nextauth-secret"
-  },
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 30

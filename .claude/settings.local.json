@@ -14,7 +14,10 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "Bash(find:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(npm install:*)",
+      "Bash(vercel:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }
