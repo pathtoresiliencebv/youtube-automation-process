@@ -10,11 +10,16 @@ import { VideoIdeasWidget } from './video-ideas-widget'
 import { ProductionPipelineWidget } from './production-pipeline-widget'
 import { PublicationCalendarWidget } from './publication-calendar-widget'
 import { AnalyticsWidget } from './analytics-widget'
-import { PlayCircle, Lightbulb, Calendar, BarChart3 } from 'lucide-react'
+import { PlayCircle, Lightbulb, Calendar, BarChart3, LogOut, User } from 'lucide-react'
 
-export function Dashboard() {
+interface DashboardProps {
+  user: any
+  onLogout: () => void
+}
+
+export function Dashboard({ user, onLogout }: DashboardProps) {
   const [isGenerating, setIsGenerating] = useState(false)
-  const user = useQuery(api.users.getCurrentUser)
+  const convexUser = useQuery(api.users.getCurrentUser)
 
   const handleGenerateIdeas = async () => {
     if (!user) return
@@ -60,9 +65,21 @@ export function Dashboard() {
                 Genereer Nieuwe Ideeën
               </Button>
               
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Actief</span>
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <User className="w-4 h-4" />
+                  <span>{user?.name || 'User'}</span>
+                </div>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onLogout}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  <LogOut className="w-4 h-4 mr-1" />
+                  Uitloggen
+                </Button>
               </div>
             </div>
           </div>

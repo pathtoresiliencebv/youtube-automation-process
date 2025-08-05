@@ -11,6 +11,21 @@ export default function HomePage() {
   const [user, setUser] = useState(null)
 
   useEffect(() => {
+    // Check for stored user session first
+    const storedUser = localStorage.getItem('youtube_automation_user')
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser)
+        setUser(userData)
+        setIsAuthenticated(true)
+        setIsLoading(false)
+        return
+      } catch (error) {
+        console.error('Error parsing stored user data:', error)
+        localStorage.removeItem('youtube_automation_user')
+      }
+    }
+
     // Check for OAuth success in URL parameters
     const urlParams = new URLSearchParams(window.location.search)
     const success = urlParams.get('success')
@@ -23,8 +38,12 @@ export default function HomePage() {
         id: channelId,
         name: decodeURIComponent(channelName.replace(/\+/g, ' ')),
         channelId: channelId,
-        email: null // Will be filled later if needed
+        email: null, // Will be filled later if needed
+        authenticatedAt: Date.now()
       }
+      
+      // Store in localStorage
+      localStorage.setItem('youtube_automation_user', JSON.stringify(userData))
       
       setUser(userData)
       setIsAuthenticated(true)
@@ -47,8 +66,8 @@ export default function HomePage() {
     // Default loading behavior
     const timer = setTimeout(() => {
       setIsLoading(false)
-      // No OAuth success, show auth form
-      if (!success) {
+      // No OAuth success and no stored session, show auth form
+      if (!success && !storedUser) {
         setUser(null)
         setIsAuthenticated(false)
       }
@@ -76,9 +95,15 @@ export default function HomePage() {
     )
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('youtube_automation_user')
+    setUser(null)
+    setIsAuthenticated(false)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Dashboard />
+      <Dashboard user={user} onLogout={handleLogout} />
     </div>
   )
 }
