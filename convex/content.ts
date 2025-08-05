@@ -199,18 +199,28 @@ export const generateScript: any = action({
 
       return data.script;
     } catch (error) {
-      await ctx.runMutation(internal.content.updateIdeaStatus, {
-        ideaId,
-        status: "failed",
-        error: error.message,
-      });
+      const retryCount = (await ctx.db.get(ideaId))?.retryCount || 0;
+      
+      if (retryCount < 3) {
+        await ctx.db.patch(ideaId, {
+          status: "failed",
+          error: error.message,
+          retryCount: retryCount,
+          updatedAt: Date.now(),
+        });
+      } else {
+        await ctx.runMutation(internal.errorHandling.markJobAsUnrecoverable, {
+          ideaId,
+          reason: `Script generation: ${error.message}`,
+        });
+      }
 
       await ctx.runMutation(internal.systemLogs.create, {
         userId: idea.userId,
         action: "generate_script",
         status: "error",
         message: `Script generation failed: ${error.message}`,
-        metadata: { error: error.message, ideaId },
+        metadata: { error: error.message, ideaId, retryCount },
       });
 
       throw error;

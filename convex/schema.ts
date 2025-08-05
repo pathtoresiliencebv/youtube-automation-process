@@ -26,7 +26,9 @@ export default defineSchema({
       v.literal("generating_seo"),
       v.literal("scheduled"),
       v.literal("published"),
-      v.literal("failed")
+      v.literal("failed"),
+      v.literal("pending_retry"),
+      v.literal("unrecoverable")
     ),
     generatedFromAnalysis: v.object({
       topVideos: v.array(v.object({
@@ -54,6 +56,8 @@ export default defineSchema({
       tags: v.array(v.string()),
     })),
     error: v.optional(v.string()),
+    retryCount: v.optional(v.number()),
+    lastRetryAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId"])
