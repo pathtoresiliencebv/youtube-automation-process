@@ -24,16 +24,53 @@ export function VideoIdeasWidget({ user }: VideoIdeasWidgetProps) {
 
   const handleApprove = async (ideaId: string) => {
     try {
+      // First approve the idea
       await approveIdea({ ideaId })
+      
+      // Then start video creation process
+      const response = await fetch('/api/convex/create-video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ideaId })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to start video creation: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      console.log('Video creation started:', result)
+      
+      alert(`Video idee goedgekeurd! Script wordt gegenereerd en video creatie is gestart. Job ID: ${result.jobId}`)
+      
     } catch (error) {
       console.error('Failed to approve idea:', error)
-      alert('Er ging iets mis bij het goedkeuren van het idee')
+      alert('Er ging iets mis bij het goedkeuren van het idee: ' + error.message)
     }
   }
 
   const handleReject = async (ideaId: string) => {
-    // Implementation for rejecting ideas
-    console.log('Rejecting idea:', ideaId)
+    try {
+      const response = await fetch('/api/convex/reject-idea', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ideaId })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to reject idea: ${response.statusText}`)
+      }
+
+      alert('Video idee afgewezen')
+      
+    } catch (error) {
+      console.error('Failed to reject idea:', error)
+      alert('Er ging iets mis bij het afwijzen van het idee')
+    }
   }
 
   if (!user) {
