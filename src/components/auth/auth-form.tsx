@@ -56,8 +56,9 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
       return
     }
     
-    // Implement Google OAuth flow for YouTube access
-    const redirectUri = `${window.location.origin}/api/auth/callback`
+    // Use environment variable for app URL or fallback to window.location.origin
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+    const redirectUri = `${appUrl}/api/auth/callback`
     const scope = 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/yt-analytics.readonly'
     
     const authUrl = `https://accounts.google.com/o/oauth2/auth?` +

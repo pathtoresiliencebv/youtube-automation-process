@@ -11,11 +11,47 @@ export default function HomePage() {
   const [user, setUser] = useState(null)
 
   useEffect(() => {
-    // Simulate loading user data
+    // Check for OAuth success in URL parameters
+    const urlParams = new URLSearchParams(window.location.search)
+    const success = urlParams.get('success')
+    const channelId = urlParams.get('channel_id')
+    const channelName = urlParams.get('channel_name')
+
+    if (success === 'true' && channelId && channelName) {
+      // OAuth success - create user session
+      const userData = {
+        id: channelId,
+        name: decodeURIComponent(channelName.replace(/\+/g, ' ')),
+        channelId: channelId,
+        email: null // Will be filled later if needed
+      }
+      
+      setUser(userData)
+      setIsAuthenticated(true)
+      setIsLoading(false)
+      
+      // Clean URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname)
+      return
+    }
+
+    // Check for errors
+    const error = urlParams.get('error')
+    if (error) {
+      console.error('OAuth error:', error)
+      alert('Er ging iets mis met de authenticatie. Probeer het opnieuw.')
+      // Clean URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+
+    // Default loading behavior
     const timer = setTimeout(() => {
       setIsLoading(false)
-      // For now, no user is authenticated - will show auth form
-      setUser(null)
+      // No OAuth success, show auth form
+      if (!success) {
+        setUser(null)
+        setIsAuthenticated(false)
+      }
     }, 1000)
 
     return () => clearTimeout(timer)
