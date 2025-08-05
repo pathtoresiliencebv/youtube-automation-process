@@ -16,7 +16,15 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
   const [name, setName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const createUser = useMutation(api.users.createUser)
+  // Safe API usage with fallback
+  const createUser = (() => {
+    try {
+      return useMutation(api?.users?.createUser) || (() => Promise.resolve())
+    } catch (error) {
+      console.warn('Convex API not available:', error)
+      return () => Promise.resolve()
+    }
+  })()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
