@@ -241,6 +241,166 @@ export const getVideoIdeasByUser: any = query({
   },
 });
 
+export const generateSEOContent: any = action({
+  args: {
+    ideaId: v.id("videoIdeas"),
+  },
+  handler: async (ctx, { ideaId }) => {
+    const idea = await ctx.runQuery(internal.content.getVideoIdea, { ideaId });
+    
+    if (!idea) {
+      throw new Error("Video idea not found");
+    }
+
+    try {
+      // Update status to indicate SEO generation is starting
+      await ctx.runMutation(internal.content.updateIdeaStatus, {
+        ideaId,
+        status: "generating_seo",
+      });
+
+      // Generate SEO content using Gemini
+      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/gemini/generate-seo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: idea.title,
+          description: idea.description,
+          script: idea.script,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`SEO generation API error: ${response.statusText}`);
+      }
+
+      const seoData = await response.json();
+
+      // Update idea with SEO content
+      await ctx.db.patch(ideaId, {
+        seoTitle: seoData.title,
+        seoDescription: seoData.description,
+        tags: seoData.tags,
+        updatedAt: Date.now(),
+      });
+
+      // Now start YouTube upload process
+      await ctx.scheduler.runAfter(0, internal.content.uploadToYouTube, { ideaId });
+
+      await ctx.runMutation(internal.systemLogs.create, {
+        userId: idea.userId,
+        action: "generate_seo",
+        status: "success",
+        message: `SEO content generated for: ${idea.title}`,
+        metadata: { ideaId, seoData },
+      });
+
+      return seoData;
+    } catch (error) {
+      await ctx.runMutation(internal.content.updateIdeaStatus, {
+        ideaId,
+        status: "failed",
+        error: error.message,
+      });
+
+      await ctx.runMutation(internal.systemLogs.create, {
+        userId: idea.userId,
+        action: "generate_seo",
+        status: "error",
+        message: `SEO generation failed: ${error.message}`,
+        metadata: { error: error.message, ideaId },
+      });
+
+      throw error;
+    }
+  },
+});
+
+export const uploadToYouTube: any = action({
+  args: {
+    ideaId: v.id("videoIdeas"),
+  },
+  handler: async (ctx, { ideaId }) => {
+    const idea = await ctx.runQuery(internal.content.getVideoIdea, { ideaId });
+    
+    if (!idea || !idea.videoUrl) {
+      throw new Error("Video idea or video URL not found");
+    }
+
+    try {
+      // Update status to uploading
+      await ctx.runMutation(internal.content.updateIdeaStatus, {
+        ideaId,
+        status: "uploading",
+      });
+
+      // Get user data to get refresh token
+      const user = await ctx.db.get(idea.userId);
+      if (!user || !user.youtubeRefreshToken) {
+        throw new Error("User YouTube credentials not found");
+      }
+
+      // Call YouTube upload API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/youtube/upload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channelId: user.youtubeChannelId,
+          refreshToken: user.youtubeRefreshToken,
+          videoUrl: idea.videoUrl,
+          title: idea.seoTitle || idea.title,
+          description: idea.seoDescription || idea.description,
+          tags: idea.tags || [],
+          scheduledDate: idea.scheduledDate || new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`YouTube upload API error: ${response.statusText}`);
+      }
+
+      const uploadResult = await response.json();
+
+      // Update idea with YouTube video ID and set to scheduled/published
+      await ctx.runMutation(internal.content.updateIdeaStatus, {
+        ideaId,
+        status: uploadResult.status, // 'scheduled' or 'published'
+        youtubeVideoId: uploadResult.videoId,
+      });
+
+      await ctx.runMutation(internal.systemLogs.create, {
+        userId: idea.userId,
+        action: "youtube_upload",
+        status: "success",
+        message: `Video uploaded to YouTube: ${idea.title}`,
+        metadata: { ideaId, youtubeVideoId: uploadResult.videoId, uploadResult },
+      });
+
+      return uploadResult;
+    } catch (error) {
+      await ctx.runMutation(internal.content.updateIdeaStatus, {
+        ideaId,
+        status: "failed",
+        error: error.message,
+      });
+
+      await ctx.runMutation(internal.systemLogs.create, {
+        userId: idea.userId,
+        action: "youtube_upload",
+        status: "error",
+        message: `YouTube upload failed: ${error.message}`,
+        metadata: { error: error.message, ideaId },
+      });
+
+      throw error;
+    }
+  },
+});
+
 export const updateIdeaStatus: any = internalMutation({
   args: {
     ideaId: v.id("videoIdeas"),

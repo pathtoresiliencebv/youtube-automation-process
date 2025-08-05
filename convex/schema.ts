@@ -23,6 +23,7 @@ export default defineSchema({
       v.literal("video_creating"),
       v.literal("video_completed"),
       v.literal("uploading"),
+      v.literal("generating_seo"),
       v.literal("scheduled"),
       v.literal("published"),
       v.literal("failed")
@@ -44,6 +45,9 @@ export default defineSchema({
     videoUrl: v.optional(v.string()),
     youtubeVideoId: v.optional(v.string()),
     scheduledDate: v.optional(v.number()),
+    seoTitle: v.optional(v.string()),
+    seoDescription: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
     seoData: v.optional(v.object({
       optimizedTitle: v.string(),
       description: v.string(),
