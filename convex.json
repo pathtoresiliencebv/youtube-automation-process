@@ -1,0 +1,9 @@
+{
+  "project": "content-catalyst-engine",
+  "prodUrl": "",
+  "functions": "convex/",
+  "generateCommonJSApi": false,
+  "node": {
+    "version": "18"
+  }
+}
