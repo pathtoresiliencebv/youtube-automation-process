@@ -4,10 +4,9 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { useStackApp } from '@stackframe/stack'
 
 interface AuthFormProps {
-  onSuccess: () => void
+  onSuccess: (user: any) => void
 }
 
 export function AuthForm({ onSuccess }: AuthFormProps) {
@@ -15,9 +14,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
   const [password, setPassword] = useState('6fz9itxv1')
   const [name, setName] = useState('Path to Resilience')
   const [isLoading, setIsLoading] = useState(false)
-  const [isSignUp, setIsSignUp] = useState(true)
-  
-  const stackApp = useStackApp()
+  const [isSignUp, setIsSignUp] = useState(false) // Default to signin
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,21 +27,28 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
     setIsLoading(true)
     
     try {
-      if (isSignUp) {
-        // Sign up new user
-        await stackApp.signUp({
-          email,
-          password,
-          displayName: name
-        })
-      } else {
-        // Sign in existing user
-        await stackApp.signIn({
-          email,
-          password
-        })
+      const endpoint = isSignUp ? '/api/auth/signup' : '/api/auth/signin'
+      const body = isSignUp 
+        ? { email, password, name }
+        : { email, password }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body)
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Authentication failed')
       }
-      onSuccess()
+
+      if (data.success) {
+        onSuccess(data.user)
+      }
     } catch (error: any) {
       console.error('Auth error:', error)
       alert(error.message || 'Er ging iets mis. Probeer het opnieuw.')
