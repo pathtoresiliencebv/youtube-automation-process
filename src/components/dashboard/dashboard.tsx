@@ -14,6 +14,8 @@ import { YouTubeConnectWidget } from './youtube-connect-widget'
 import { BulkManagementWidget } from './bulk-management-widget'
 import { NotificationsWidget } from './notifications-widget'
 import { NotificationSettingsWidget } from './notification-settings-widget'
+import { AIOptimizationWidget } from './ai-optimization-widget'
+import { ContentCalendarWidget } from './content-calendar-widget'
 import { PlayCircle, Lightbulb, Calendar, BarChart3, LogOut, User, Settings } from 'lucide-react'
 
 interface DashboardProps {
@@ -233,6 +235,16 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
           <ProductionPipelineWidget user={user} />
           <PublicationCalendarWidget user={user} />
           <AnalyticsWidget user={user} />
+        </div>
+
+        {/* AI Optimization Section */}
+        <div className="grid grid-cols-1 gap-6 mb-8">
+          <AIOptimizationWidget user={user} />
+        </div>
+
+        {/* Content Calendar Section */}
+        <div className="grid grid-cols-1 gap-6 mb-8">
+          <ContentCalendarWidget user={user} />
         </div>
 
         {/* Notifications Section */}

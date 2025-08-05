@@ -150,4 +150,55 @@ export default defineSchema({
   }).index("by_user", ["userId"])
     .index("by_read", ["read"])
     .index("by_created_at", ["createdAt"]),
+
+  contentAnalysis: defineTable({
+    userId: v.id("users"),
+    analysisType: v.union(
+      v.literal("trending_topics"),
+      v.literal("optimal_timing"),
+      v.literal("content_patterns"),
+      v.literal("audience_engagement")
+    ),
+    results: v.any(),
+    dataPoints: v.number(),
+    confidence: v.string(),
+    generatedAt: v.number(),
+  }).index("by_user", ["userId"])
+    .index("by_type", ["analysisType"])
+    .index("by_generated_at", ["generatedAt"]),
+
+  contentOptimizations: defineTable({
+    userId: v.id("users"),
+    contentType: v.union(
+      v.literal("video_idea"),
+      v.literal("title_optimization"), 
+      v.literal("script_improvement")
+    ),
+    originalContent: v.string(),
+    optimizedContent: v.any(),
+    improvements: v.array(v.string()),
+    predictedPerformance: v.any(),
+    basedOnAnalysis: v.id("contentAnalysis"),
+    actualPerformance: v.optional(v.any()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"])
+    .index("by_type", ["contentType"])
+    .index("by_analysis", ["basedOnAnalysis"]),
+
+  contentCalendars: defineTable({
+    userId: v.id("users"),
+    weeks: v.number(),
+    videosPerWeek: v.number(),
+    preferences: v.any(),
+    calendar: v.any(), // Array of weeks with video slots
+    basedOnAnalysis: v.object({
+      timing: v.optional(v.id("contentAnalysis")),
+      topics: v.optional(v.id("contentAnalysis"))
+    }),
+    status: v.string(), // 'draft', 'active', 'completed', 'archived'
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_created_at", ["createdAt"]),
 });
