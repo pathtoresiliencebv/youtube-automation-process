@@ -10,14 +10,16 @@ import { VideoIdeasWidget } from './video-ideas-widget'
 import { ProductionPipelineWidget } from './production-pipeline-widget'
 import { PublicationCalendarWidget } from './publication-calendar-widget'
 import { AnalyticsWidget } from './analytics-widget'
+import { YouTubeConnectWidget } from './youtube-connect-widget'
 import { PlayCircle, Lightbulb, Calendar, BarChart3, LogOut, User } from 'lucide-react'
 
 interface DashboardProps {
   user: any
   onLogout: () => void
+  onUpdateUser?: (userData: any) => void
 }
 
-export function Dashboard({ user, onLogout }: DashboardProps) {
+export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const convexUser = useQuery(api.users.getCurrentUser)
 
@@ -149,6 +151,19 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
               </p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* YouTube Connection */}
+        <div className="mb-6">
+          <YouTubeConnectWidget 
+            user={user} 
+            onConnectionUpdate={(connected, channelData) => {
+              if (onUpdateUser) {
+                const updatedUser = { ...user, youtubeConnected: connected, ...channelData }
+                onUpdateUser(updatedUser)
+              }
+            }} 
+          />
         </div>
 
         {/* Widgets Grid */}

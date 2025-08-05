@@ -42,15 +42,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/?error=no_channel', request.nextUrl.origin));
     }
 
-    // Store tokens in session/database (implement based on your auth strategy)
-    // For now, redirect with success and channel info
+    // Update stored user with YouTube channel info
     const redirectUrl = new URL('/', request.nextUrl.origin);
-    redirectUrl.searchParams.set('success', 'true');
+    redirectUrl.searchParams.set('youtube_success', 'true');
     redirectUrl.searchParams.set('channel_id', channel.id!);
     redirectUrl.searchParams.set('channel_name', channel.snippet?.title || '');
-    
-    // In a real implementation, you would store the refresh_token securely
-    // and associate it with the user account
+    redirectUrl.searchParams.set('refresh_token', tokens.refresh_token || '');
     
     return NextResponse.redirect(redirectUrl);
 

@@ -11,80 +11,54 @@ export default function HomePage() {
   const [user, setUser] = useState(null)
 
   useEffect(() => {
-    console.log('🔍 App initialization - checking session...')
-    
-    // Check for stored user session first
+    // Check for YouTube OAuth success
+    const urlParams = new URLSearchParams(window.location.search)
+    const youtubeSuccess = urlParams.get('youtube_success')
+    const channelId = urlParams.get('channel_id')
+    const channelName = urlParams.get('channel_name')
+    const refreshToken = urlParams.get('refresh_token')
+
+    if (youtubeSuccess === 'true' && channelId && channelName) {
+      // Update existing user with YouTube info
+      const storedUser = localStorage.getItem('youtube_automation_user')
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser)
+          userData.youtubeChannelId = channelId
+          userData.youtubeChannelTitle = decodeURIComponent(channelName.replace(/\+/g, ' '))
+          userData.youtubeRefreshToken = refreshToken
+          userData.youtubeConnected = true
+          
+          localStorage.setItem('youtube_automation_user', JSON.stringify(userData))
+          setUser(userData)
+          setIsAuthenticated(true)
+          
+          // Clean URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname)
+        } catch (error) {
+          console.error('Error updating user with YouTube data:', error)
+        }
+      }
+    }
+
+    // Check for stored user session
     const storedUser = localStorage.getItem('youtube_automation_user')
-    console.log('📦 Stored user data:', storedUser)
     
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser)
-        console.log('✅ Found valid stored session:', userData)
         setUser(userData)
         setIsAuthenticated(true)
         setIsLoading(false)
         return
       } catch (error) {
-        console.error('❌ Error parsing stored user data:', error)
+        console.error('Error parsing stored user data:', error)
         localStorage.removeItem('youtube_automation_user')
       }
     }
 
-    // Check for OAuth success in URL parameters
-    const urlParams = new URLSearchParams(window.location.search)
-    const success = urlParams.get('success')
-    const channelId = urlParams.get('channel_id')
-    const channelName = urlParams.get('channel_name')
-    
-    console.log('🔗 URL params:', { success, channelId, channelName })
-
-    if (success === 'true' && channelId && channelName) {
-      console.log('🎉 OAuth success detected, creating session...')
-      // OAuth success - create user session
-      const userData = {
-        id: channelId,
-        name: decodeURIComponent(channelName.replace(/\+/g, ' ')),
-        channelId: channelId,
-        email: null, // Will be filled later if needed
-        authenticatedAt: Date.now()
-      }
-      
-      console.log('💾 Storing user data:', userData)
-      // Store in localStorage
-      localStorage.setItem('youtube_automation_user', JSON.stringify(userData))
-      
-      setUser(userData)
-      setIsAuthenticated(true)
-      setIsLoading(false)
-      
-      // Clean URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname)
-      return
-    }
-
-    // Check for errors
-    const error = urlParams.get('error')
-    if (error) {
-      console.error('❌ OAuth error:', error)
-      alert('Er ging iets mis met de authenticatie. Probeer het opnieuw.')
-      // Clean URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname)
-    }
-
-    // Default loading behavior
-    console.log('⏳ No stored session or OAuth, showing auth form in 500ms...')
-    const timer = setTimeout(() => {
-      console.log('⏰ Timer completed, setting loading to false')
-      setIsLoading(false)
-      // No OAuth success and no stored session, show auth form
-      if (!success && !storedUser) {
-        setUser(null)
-        setIsAuthenticated(false)
-      }
-    }, 500) // Reduced timeout for faster UX
-
-    return () => clearTimeout(timer)
+    // Simple loading - just show auth form
+    setIsLoading(false)
   }, [])
 
   if (isLoading) {
@@ -112,9 +86,14 @@ export default function HomePage() {
     setIsAuthenticated(false)
   }
 
+  const handleUpdateUser = (userData: any) => {
+    localStorage.setItem('youtube_automation_user', JSON.stringify(userData))
+    setUser(userData)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Dashboard user={user} onLogout={handleLogout} />
+      <Dashboard user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />
     </div>
   )
 }

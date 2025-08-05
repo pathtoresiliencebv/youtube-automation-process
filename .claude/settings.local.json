@@ -19,7 +19,8 @@
       "Bash(vercel:*)",
       "Bash(node:*)",
       "Bash(curl:*)",
-      "Bash(npm run seed:postgres:*)"
+      "Bash(npm run seed:postgres:*)",
+      "Bash(claude mcp add:*)"
     ],
     "deny": []
   }
