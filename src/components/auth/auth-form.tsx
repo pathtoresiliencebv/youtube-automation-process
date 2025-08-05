@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { useMutation } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useStackApp } from '@stackframe/stack'
 
 interface AuthFormProps {
   onSuccess: () => void
@@ -13,23 +12,17 @@ interface AuthFormProps {
 
 export function AuthForm({ onSuccess }: AuthFormProps) {
   const [email, setEmail] = useState('pathtoresiliencebv@gmail.com')
+  const [password, setPassword] = useState('6fz9itxv1')
   const [name, setName] = useState('Path to Resilience')
   const [isLoading, setIsLoading] = useState(false)
-
-  // Safe API usage with fallback
-  const createUser = (() => {
-    try {
-      return useMutation(api?.users?.createUser) || (() => Promise.resolve())
-    } catch (error) {
-      console.warn('Convex API not available:', error)
-      return () => Promise.resolve()
-    }
-  })()
+  const [isSignUp, setIsSignUp] = useState(true)
+  
+  const stackApp = useStackApp()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!email || !name) {
+    if (!email || !password || (isSignUp && !name)) {
       alert('Vul alle velden in')
       return
     }
@@ -37,20 +30,24 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
     setIsLoading(true)
     
     try {
-      // Create user account and store in localStorage
-      const userData = {
-        id: Date.now().toString(),
-        email: email,
-        name: name,
-        authenticatedAt: Date.now(),
-        youtubeConnected: false
+      if (isSignUp) {
+        // Sign up new user
+        await stackApp.signUp({
+          email,
+          password,
+          displayName: name
+        })
+      } else {
+        // Sign in existing user
+        await stackApp.signIn({
+          email,
+          password
+        })
       }
-      
-      localStorage.setItem('youtube_automation_user', JSON.stringify(userData))
       onSuccess()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Auth error:', error)
-      alert('Er ging iets mis. Probeer het opnieuw.')
+      alert(error.message || 'Er ging iets mis. Probeer het opnieuw.')
     } finally {
       setIsLoading(false)
     }
@@ -93,20 +90,22 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Naam
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Je naam"
-              required
-            />
-          </div>
+          {isSignUp && (
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                Naam
+              </label>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Je naam"
+                required
+              />
+            </div>
+          )}
           
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -123,13 +122,38 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             />
           </div>
 
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              Wachtwoord
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Wachtwoord"
+              required
+            />
+          </div>
+
           <Button 
             type="submit" 
             className="w-full"
             disabled={isLoading}
           >
-            {isLoading ? <LoadingSpinner size="sm" /> : 'Inloggen'}
+            {isLoading ? <LoadingSpinner size="sm" /> : (isSignUp ? 'Account Aanmaken' : 'Inloggen')}
           </Button>
+
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              {isSignUp ? 'Al een account? Inloggen' : 'Geen account? Registreren'}
+            </button>
+          </div>
         </form>
 
       </CardContent>

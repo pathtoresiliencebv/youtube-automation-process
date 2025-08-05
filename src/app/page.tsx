@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react'
 import { Dashboard } from '@/components/dashboard/dashboard'
 import { AuthForm } from '@/components/auth/auth-form'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { useUser } from '@stackframe/stack'
 
 export default function HomePage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const stackUser = useUser()
   const [isLoading, setIsLoading] = useState(true)
-  const [user, setUser] = useState(null)
+  const [youtubeData, setYoutubeData] = useState(null)
 
   useEffect(() => {
     // Check for YouTube OAuth success
@@ -18,48 +19,24 @@ export default function HomePage() {
     const channelName = urlParams.get('channel_name')
     const refreshToken = urlParams.get('refresh_token')
 
-    if (youtubeSuccess === 'true' && channelId && channelName) {
-      // Update existing user with YouTube info
-      const storedUser = localStorage.getItem('youtube_automation_user')
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser)
-          userData.youtubeChannelId = channelId
-          userData.youtubeChannelTitle = decodeURIComponent(channelName.replace(/\+/g, ' '))
-          userData.youtubeRefreshToken = refreshToken
-          userData.youtubeConnected = true
-          
-          localStorage.setItem('youtube_automation_user', JSON.stringify(userData))
-          setUser(userData)
-          setIsAuthenticated(true)
-          
-          // Clean URL parameters
-          window.history.replaceState({}, document.title, window.location.pathname)
-        } catch (error) {
-          console.error('Error updating user with YouTube data:', error)
-        }
+    if (youtubeSuccess === 'true' && channelId && channelName && stackUser) {
+      // Store YouTube data for the logged-in user
+      const youtubeInfo = {
+        youtubeChannelId: channelId,
+        youtubeChannelTitle: decodeURIComponent(channelName.replace(/\+/g, ' ')),
+        youtubeRefreshToken: refreshToken,
+        youtubeConnected: true
       }
+      
+      setYoutubeData(youtubeInfo)
+      
+      // Clean URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname)
     }
 
-    // Check for stored user session
-    const storedUser = localStorage.getItem('youtube_automation_user')
-    
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser)
-        setUser(userData)
-        setIsAuthenticated(true)
-        setIsLoading(false)
-        return
-      } catch (error) {
-        console.error('Error parsing stored user data:', error)
-        localStorage.removeItem('youtube_automation_user')
-      }
-    }
-
-    // Simple loading - just show auth form
+    // Set loading to false after Stack Auth has loaded
     setIsLoading(false)
-  }, [])
+  }, [stackUser])
 
   if (isLoading) {
     return (
@@ -72,23 +49,29 @@ export default function HomePage() {
     )
   }
 
-  if (!user || !isAuthenticated) {
+  if (!stackUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <AuthForm onSuccess={() => setIsAuthenticated(true)} />
+        <AuthForm onSuccess={() => {}} />
       </div>
     )
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('youtube_automation_user')
-    setUser(null)
-    setIsAuthenticated(false)
+  const handleLogout = async () => {
+    await stackUser.signOut()
+    setYoutubeData(null)
   }
 
   const handleUpdateUser = (userData: any) => {
-    localStorage.setItem('youtube_automation_user', JSON.stringify(userData))
-    setUser(userData)
+    setYoutubeData(userData)
+  }
+
+  // Combine Stack user with YouTube data
+  const user = {
+    id: stackUser.id,
+    email: stackUser.primaryEmail,
+    name: stackUser.displayName || stackUser.primaryEmail,
+    ...youtubeData
   }
 
   return (
