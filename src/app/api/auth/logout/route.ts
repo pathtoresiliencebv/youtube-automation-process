@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = cookies()
+    // Create response and remove session cookie
+    const response = NextResponse.json({ success: true })
+    response.cookies.delete('user_session')
     
-    // Remove the session cookie
-    cookieStore.delete('user_session')
-    
-    return NextResponse.json({ success: true })
+    return response
     
   } catch (error) {
     console.error('Logout error:', error)

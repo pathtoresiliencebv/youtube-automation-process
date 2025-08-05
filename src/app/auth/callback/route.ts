@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -63,9 +64,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/?error=no_channel', request.url))
     }
 
-    // Store user session data in cookies
-    const cookieStore = cookies()
-    
     // Create user session object
     const userSession = {
       id: channel.id,
@@ -79,8 +77,9 @@ export async function GET(request: NextRequest) {
       tokenExpiry: Date.now() + (tokens.expires_in * 1000),
     }
 
-    // Set secure session cookie
-    cookieStore.set('user_session', JSON.stringify(userSession), {
+    // Create redirect response and set session cookie
+    const response = NextResponse.redirect(new URL('/dashboard', request.url))
+    response.cookies.set('user_session', JSON.stringify(userSession), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -88,8 +87,7 @@ export async function GET(request: NextRequest) {
       path: '/',
     })
 
-    // Redirect to dashboard
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return response
 
   } catch (error) {
     console.error('OAuth callback error:', error)

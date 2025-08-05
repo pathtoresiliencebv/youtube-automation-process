@@ -1,22 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = cookies()
-    const userSession = cookieStore.get('user_session')
+    // Get user session from cookie
+    const userSessionCookie = request.cookies.get('user_session')
 
-    if (!userSession) {
+    if (!userSessionCookie) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const userData = JSON.parse(userSession.value)
+    const userData = JSON.parse(userSessionCookie.value)
     
     // Check if token is expired
     if (userData.tokenExpiry && Date.now() > userData.tokenExpiry) {
-      // Token expired, remove session
-      cookieStore.delete('user_session')
-      return NextResponse.json({ error: 'Token expired' }, { status: 401 })
+      // Token expired
+      const response = NextResponse.json({ error: 'Token expired' }, { status: 401 })
+      response.cookies.delete('user_session')
+      return response
     }
 
     // Remove sensitive data before sending to client
