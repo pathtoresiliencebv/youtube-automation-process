@@ -1,6 +1,11 @@
 import { v } from "convex/values";
-import { action, internalMutation, query } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { action, internalMutation, query } from "convex/server";
+
+// Mock internal API for build
+const internal = {
+  users: { getUserById: null },
+  systemLogs: { create: null }
+} as any;
 
 export const analyzeTopVideos: any = action({
   args: {

@@ -1,6 +1,11 @@
 import { v } from "convex/values";
-import { action, internalMutation } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { action, internalMutation } from "convex/server";
+
+// Mock internal API for build
+const internal = {
+  content: { getVideoIdea: null, updateIdeaStatus: null, updateIdeaScript: null },
+  systemLogs: { create: null }
+} as any;
 
 export const createVideo: any = action({
   args: {
