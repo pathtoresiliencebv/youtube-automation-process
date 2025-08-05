@@ -21,6 +21,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Check environment variables
+    const clientId = process.env.NEXT_PUBLIC_YOUTUBE_CLIENT_ID
+    const clientSecret = process.env.YOUTUBE_CLIENT_SECRET
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+
+    if (!clientId || !clientSecret || !appUrl) {
+      console.error('Missing OAuth environment variables:', {
+        clientId: !!clientId,
+        clientSecret: !!clientSecret,
+        appUrl: !!appUrl
+      })
+      return NextResponse.redirect(new URL('/?error=missing_config', request.url))
+    }
+
+    console.log('Starting token exchange with redirect URI:', `${appUrl}/auth/callback`)
+
     // Exchange authorization code for access token
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -29,16 +45,21 @@ export async function GET(request: NextRequest) {
       },
       body: new URLSearchParams({
         code,
-        client_id: process.env.NEXT_PUBLIC_YOUTUBE_CLIENT_ID!,
-        client_secret: process.env.YOUTUBE_CLIENT_SECRET!,
-        redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: `${appUrl}/auth/callback`,
         grant_type: 'authorization_code',
       }),
     })
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text()
-      console.error('Token exchange failed:', errorData)
+      console.error('Token exchange failed:', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        error: errorData,
+        redirectUri: `${appUrl}/auth/callback`
+      })
       return NextResponse.redirect(new URL('/?error=token_exchange_failed', request.url))
     }
 

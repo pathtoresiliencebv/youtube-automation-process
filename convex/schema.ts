@@ -89,4 +89,38 @@ export default defineSchema({
   }).index("by_user", ["userId"])
     .index("by_timestamp", ["timestamp"])
     .index("by_status", ["status"]),
+
+  videoAnalytics: defineTable({
+    userId: v.id("users"),
+    youtubeVideoId: v.string(),
+    views: v.number(),
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    watchTime: v.number(),
+    ctr: v.number(),
+    avgViewDuration: v.number(),
+    subscribersGained: v.number(),
+    revenue: v.number(),
+    impressions: v.number(),
+    timestamp: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"])
+    .index("by_video", ["youtubeVideoId"])
+    .index("by_timestamp", ["timestamp"]),
+
+  performanceInsights: defineTable({
+    userId: v.id("users"),
+    insights: v.array(v.string()),
+    recommendations: v.array(v.string()),
+    trendsAnalysis: v.object({
+      viewsTrend: v.string(),
+      engagementTrend: v.string(),
+      contentPerformance: v.string(),
+    }),
+    generatedAt: v.number(),
+    dataTimeframe: v.string(),
+  }).index("by_user", ["userId"])
+    .index("by_generated_at", ["generatedAt"]),
 });

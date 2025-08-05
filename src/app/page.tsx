@@ -21,11 +21,12 @@ export default function HomePage() {
     if (error) {
       const errorMessages: Record<string, string> = {
         'no_code': 'Geen autorisatiecode ontvangen van Google',
-        'token_exchange_failed': 'Fout bij het uitwisselen van tokens',
+        'token_exchange_failed': 'Fout bij het uitwisselen van tokens - controleer OAuth configuratie',
         'user_info_failed': 'Kon YouTube kanalinformatie niet ophalen',
         'no_channel': 'Geen YouTube kanaal gevonden voor dit account',
         'callback_failed': 'Fout tijdens inlogproces',
         'access_denied': 'Toegang geweigerd door gebruiker',
+        'missing_config': 'OAuth configuratie ontbreekt - stel environment variables in',
       }
       
       setErrorMessage(errorMessages[error] || 'Er is een fout opgetreden tijdens het inloggen')
