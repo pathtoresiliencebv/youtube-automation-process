@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { action, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 
-export const createVideo = action({
+export const createVideo: any = action({
   args: {
     ideaId: v.id("videoIdeas"),
   },
@@ -131,7 +131,7 @@ export const createVideo = action({
   },
 });
 
-export const updateVideoJob = internalMutation({
+export const updateVideoJob: any = internalMutation({
   args: {
     ideaId: v.id("videoIdeas"),
     jobId: v.string(),
@@ -153,7 +153,7 @@ export const updateVideoJob = internalMutation({
   },
 });
 
-export const handleWebhook = action({
+export const handleWebhook: any = action({
   args: {
     jobId: v.string(),
     status: v.string(),

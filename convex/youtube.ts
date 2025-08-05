@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { action, internalMutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 
-export const analyzeTopVideos = action({
+export const analyzeTopVideos: any = action({
   args: {
     userId: v.id("users"),
   },
@@ -61,7 +61,7 @@ export const analyzeTopVideos = action({
   },
 });
 
-export const storeAnalytics = internalMutation({
+export const storeAnalytics: any = internalMutation({
   args: {
     userId: v.id("users"),
     videoData: v.object({
@@ -100,7 +100,7 @@ export const storeAnalytics = internalMutation({
   },
 });
 
-export const getTopVideos = query({
+export const getTopVideos: any = query({
   args: {
     userId: v.id("users"),
     limit: v.optional(v.number()),
@@ -114,7 +114,7 @@ export const getTopVideos = query({
   },
 });
 
-export const uploadVideo = action({
+export const uploadVideo: any = action({
   args: {
     userId: v.id("users"),
     ideaId: v.id("videoIdeas"),

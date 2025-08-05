@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
 
-export const create = internalMutation({
+export const create: any = internalMutation({
   args: {
     userId: v.optional(v.id("users")),
     action: v.string(),
@@ -17,7 +17,7 @@ export const create = internalMutation({
   },
 });
 
-export const getRecentLogs = query({
+export const getRecentLogs: any = query({
   args: {
     userId: v.optional(v.id("users")),
     limit: v.optional(v.number()),
@@ -36,7 +36,7 @@ export const getRecentLogs = query({
   },
 });
 
-export const getLogsByAction = query({
+export const getLogsByAction: any = query({
   args: {
     action: v.string(),
     userId: v.optional(v.id("users")),

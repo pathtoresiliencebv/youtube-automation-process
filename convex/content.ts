@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { action, internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 
-export const generateVideoIdeas = action({
+export const generateVideoIdeas: any = action({
   args: {
     userId: v.id("users"),
   },
@@ -68,7 +68,7 @@ export const generateVideoIdeas = action({
   },
 });
 
-export const createVideoIdea = internalMutation({
+export const createVideoIdea: any = internalMutation({
   args: {
     userId: v.id("users"),
     title: v.string(),
@@ -91,7 +91,7 @@ export const createVideoIdea = internalMutation({
   },
 });
 
-export const approveVideoIdea = mutation({
+export const approveVideoIdea: any = mutation({
   args: {
     ideaId: v.id("videoIdeas"),
   },
@@ -113,7 +113,7 @@ export const approveVideoIdea = mutation({
   },
 });
 
-export const generateScript = action({
+export const generateScript: any = action({
   args: {
     ideaId: v.id("videoIdeas"),
   },
@@ -184,14 +184,14 @@ export const generateScript = action({
   },
 });
 
-export const getVideoIdea = query({
+export const getVideoIdea: any = query({
   args: { ideaId: v.id("videoIdeas") },
   handler: async (ctx, { ideaId }) => {
     return await ctx.db.get(ideaId);
   },
 });
 
-export const getVideoIdeasByUser = query({
+export const getVideoIdeasByUser: any = query({
   args: { 
     userId: v.id("users"),
     status: v.optional(v.string()),
@@ -207,7 +207,7 @@ export const getVideoIdeasByUser = query({
   },
 });
 
-export const updateIdeaStatus = internalMutation({
+export const updateIdeaStatus: any = internalMutation({
   args: {
     ideaId: v.id("videoIdeas"),
     status: v.string(),
@@ -229,7 +229,7 @@ export const updateIdeaStatus = internalMutation({
   },
 });
 
-export const updateIdeaScript = internalMutation({
+export const updateIdeaScript: any = internalMutation({
   args: {
     ideaId: v.id("videoIdeas"),
     script: v.string(),

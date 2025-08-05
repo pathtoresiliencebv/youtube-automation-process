@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-export const createUser = mutation({
+export const createUser: any = mutation({
   args: {
     email: v.string(),
     name: v.string(),
@@ -27,7 +27,7 @@ export const createUser = mutation({
   },
 });
 
-export const getCurrentUser = query({
+export const getCurrentUser: any = query({
   args: {},
   handler: async (ctx) => {
     // For now, return a mock user. In production, this would use authentication
@@ -36,7 +36,7 @@ export const getCurrentUser = query({
   },
 });
 
-export const updateYouTubeCredentials = mutation({
+export const updateYouTubeCredentials: any = mutation({
   args: {
     userId: v.id("users"),
     channelId: v.string(),
@@ -51,7 +51,7 @@ export const updateYouTubeCredentials = mutation({
   },
 });
 
-export const getUserById = query({
+export const getUserById: any = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     return await ctx.db.get(userId);
