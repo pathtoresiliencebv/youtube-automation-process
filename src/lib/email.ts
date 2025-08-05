@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Only initialize Resend if API key is available
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export interface EmailTemplate {
   subject: string
@@ -22,7 +23,7 @@ class EmailService {
 
   async sendNotification(notification: NotificationData): Promise<boolean> {
     try {
-      if (!process.env.RESEND_API_KEY) {
+      if (!process.env.RESEND_API_KEY || !resend) {
         console.log('Email notifications disabled: RESEND_API_KEY not configured')
         return false
       }
