@@ -11,17 +11,22 @@ export default function HomePage() {
   const [user, setUser] = useState(null)
 
   useEffect(() => {
+    console.log('🔍 App initialization - checking session...')
+    
     // Check for stored user session first
     const storedUser = localStorage.getItem('youtube_automation_user')
+    console.log('📦 Stored user data:', storedUser)
+    
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser)
+        console.log('✅ Found valid stored session:', userData)
         setUser(userData)
         setIsAuthenticated(true)
         setIsLoading(false)
         return
       } catch (error) {
-        console.error('Error parsing stored user data:', error)
+        console.error('❌ Error parsing stored user data:', error)
         localStorage.removeItem('youtube_automation_user')
       }
     }
@@ -31,8 +36,11 @@ export default function HomePage() {
     const success = urlParams.get('success')
     const channelId = urlParams.get('channel_id')
     const channelName = urlParams.get('channel_name')
+    
+    console.log('🔗 URL params:', { success, channelId, channelName })
 
     if (success === 'true' && channelId && channelName) {
+      console.log('🎉 OAuth success detected, creating session...')
       // OAuth success - create user session
       const userData = {
         id: channelId,
@@ -42,6 +50,7 @@ export default function HomePage() {
         authenticatedAt: Date.now()
       }
       
+      console.log('💾 Storing user data:', userData)
       // Store in localStorage
       localStorage.setItem('youtube_automation_user', JSON.stringify(userData))
       
@@ -57,21 +66,23 @@ export default function HomePage() {
     // Check for errors
     const error = urlParams.get('error')
     if (error) {
-      console.error('OAuth error:', error)
+      console.error('❌ OAuth error:', error)
       alert('Er ging iets mis met de authenticatie. Probeer het opnieuw.')
       // Clean URL parameters
       window.history.replaceState({}, document.title, window.location.pathname)
     }
 
     // Default loading behavior
+    console.log('⏳ No stored session or OAuth, showing auth form in 500ms...')
     const timer = setTimeout(() => {
+      console.log('⏰ Timer completed, setting loading to false')
       setIsLoading(false)
       // No OAuth success and no stored session, show auth form
       if (!success && !storedUser) {
         setUser(null)
         setIsAuthenticated(false)
       }
-    }, 1000)
+    }, 500) // Reduced timeout for faster UX
 
     return () => clearTimeout(timer)
   }, [])
