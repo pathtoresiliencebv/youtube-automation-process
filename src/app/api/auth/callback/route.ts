@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const code = searchParams.get('code');
     const error = searchParams.get('error');
 
     if (error) {
       console.error('OAuth error:', error);
-      return NextResponse.redirect(new URL('/?error=oauth_error', request.url));
+      return NextResponse.redirect(new URL('/?error=oauth_error', request.nextUrl.origin));
     }
 
     if (!code) {
-      return NextResponse.redirect(new URL('/?error=no_code', request.url));
+      return NextResponse.redirect(new URL('/?error=no_code', request.nextUrl.origin));
     }
 
     // Set up OAuth2 client
@@ -37,12 +39,12 @@ export async function GET(request: NextRequest) {
 
     const channel = channelResponse.data.items?.[0];
     if (!channel) {
-      return NextResponse.redirect(new URL('/?error=no_channel', request.url));
+      return NextResponse.redirect(new URL('/?error=no_channel', request.nextUrl.origin));
     }
 
     // Store tokens in session/database (implement based on your auth strategy)
     // For now, redirect with success and channel info
-    const redirectUrl = new URL('/', request.url);
+    const redirectUrl = new URL('/', request.nextUrl.origin);
     redirectUrl.searchParams.set('success', 'true');
     redirectUrl.searchParams.set('channel_id', channel.id!);
     redirectUrl.searchParams.set('channel_name', channel.snippet?.title || '');
@@ -54,6 +56,6 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('OAuth callback error:', error);
-    return NextResponse.redirect(new URL('/?error=callback_error', request.url));
+    return NextResponse.redirect(new URL('/?error=callback_error', request.nextUrl.origin));
   }
 }
