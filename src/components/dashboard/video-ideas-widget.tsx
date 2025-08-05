@@ -9,12 +9,15 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { getStatusColor, getStatusText, formatDate } from '@/lib/utils'
 import { Check, X, Eye } from 'lucide-react'
 
-export function VideoIdeasWidget() {
+interface VideoIdeasWidgetProps {
+  user: any
+}
+
+export function VideoIdeasWidget({ user }: VideoIdeasWidgetProps) {
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null)
-  const user = useQuery(api.users.getCurrentUser)
   const videoIdeas = useQuery(
     api.content.getVideoIdeasByUser,
-    user ? { userId: user._id, status: 'pending_approval' } : 'skip'
+    user ? { userId: user.id, status: 'pending_approval' } : 'skip'
   )
   
   const approveIdea = useMutation(api.content.approveVideoIdea)

@@ -21,7 +21,6 @@ interface DashboardProps {
 
 export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
   const [isGenerating, setIsGenerating] = useState(false)
-  const convexUser = useQuery(api.users.getCurrentUser)
 
   const handleGenerateIdeas = async () => {
     if (!user) return
@@ -168,10 +167,10 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
 
         {/* Widgets Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <VideoIdeasWidget />
-          <ProductionPipelineWidget />
-          <PublicationCalendarWidget />
-          <AnalyticsWidget />
+          <VideoIdeasWidget user={user} />
+          <ProductionPipelineWidget user={user} />
+          <PublicationCalendarWidget user={user} />
+          <AnalyticsWidget user={user} />
         </div>
       </main>
     </div>

@@ -17,11 +17,14 @@ const statusIcons = {
   failed: AlertCircle,
 }
 
-export function ProductionPipelineWidget() {
-  const user = useQuery(api.users.getCurrentUser)
+interface ProductionPipelineWidgetProps {
+  user: any
+}
+
+export function ProductionPipelineWidget({ user }: ProductionPipelineWidgetProps) {
   const videoIdeas = useQuery(
     api.content.getVideoIdeasByUser,
-    user ? { userId: user._id } : 'skip'
+    user ? { userId: user.id } : 'skip'
   )
 
   // Filter ideas that are in production (not pending approval or published)

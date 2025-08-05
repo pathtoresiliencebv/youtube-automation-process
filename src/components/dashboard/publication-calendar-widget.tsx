@@ -9,11 +9,14 @@ import { Calendar, Clock, ExternalLink } from 'lucide-react'
 import { format, addDays, startOfDay } from 'date-fns'
 import { nl } from 'date-fns/locale'
 
-export function PublicationCalendarWidget() {
-  const user = useQuery(api.users.getCurrentUser)
+interface PublicationCalendarWidgetProps {
+  user: any
+}
+
+export function PublicationCalendarWidget({ user }: PublicationCalendarWidgetProps) {
   const scheduledVideos = useQuery(
     api.content.getVideoIdeasByUser,
-    user ? { userId: user._id, status: 'scheduled' } : 'skip'
+    user ? { userId: user.id, status: 'scheduled' } : 'skip'
   )
 
   // Generate upcoming schedule for next 7 days

@@ -8,11 +8,14 @@ import { formatNumber } from '@/lib/utils'
 import { BarChart3, TrendingUp, Eye, Clock, Users } from 'lucide-react'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts'
 
-export function AnalyticsWidget() {
-  const user = useQuery(api.users.getCurrentUser)
+interface AnalyticsWidgetProps {
+  user: any
+}
+
+export function AnalyticsWidget({ user }: AnalyticsWidgetProps) {
   const topVideos = useQuery(
     api.youtube.getTopVideos,
-    user ? { userId: user._id, limit: 5 } : 'skip'
+    user ? { userId: user.id, limit: 5 } : 'skip'
   )
 
   // Generate mock analytics data for chart
