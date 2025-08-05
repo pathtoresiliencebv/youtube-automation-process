@@ -60,6 +60,13 @@ export const bulkApproveIdeas: any = action({
       }
     }
 
+    // Trigger bulk operation notification
+    await ctx.scheduler.runAfter(0, internal.notifications.triggerBulkOperationNotification, {
+      userId,
+      operation: "approve",
+      results
+    });
+
     return results;
   },
 });

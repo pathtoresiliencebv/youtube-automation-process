@@ -7,6 +7,21 @@ export default defineSchema({
     name: v.string(),
     youtubeChannelId: v.optional(v.string()),
     youtubeRefreshToken: v.optional(v.string()),
+    role: v.optional(v.string()), // 'user' | 'admin'
+    preferences: v.optional(v.object({
+      emailNotifications: v.optional(v.boolean()),
+      pushNotifications: v.optional(v.boolean()),
+      notificationTypes: v.optional(v.object({
+        videoPublished: v.optional(v.boolean()),
+        videoFailed: v.optional(v.boolean()),
+        bulkOperations: v.optional(v.boolean()),
+        systemAlerts: v.optional(v.boolean()),
+        weeklyReports: v.optional(v.boolean()),
+        quotaWarnings: v.optional(v.boolean()),
+      })),
+      theme: v.optional(v.string()),
+      language: v.optional(v.string()),
+    })),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_email", ["email"]),
@@ -123,4 +138,16 @@ export default defineSchema({
     dataTimeframe: v.string(),
   }).index("by_user", ["userId"])
     .index("by_generated_at", ["generatedAt"]),
+
+  notifications: defineTable({
+    userId: v.id("users"),
+    type: v.union(v.literal("success"), v.literal("warning"), v.literal("error"), v.literal("info")),
+    event: v.string(),
+    data: v.any(),
+    read: v.boolean(),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"])
+    .index("by_read", ["read"])
+    .index("by_created_at", ["createdAt"]),
 });

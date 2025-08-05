@@ -390,6 +390,11 @@ export const uploadToYouTube: any = action({
         metadata: { ideaId, youtubeVideoId: uploadResult.videoId, uploadResult },
       });
 
+      // Trigger video published notification
+      await ctx.scheduler.runAfter(0, internal.notifications.triggerVideoPublishedNotification, {
+        ideaId
+      });
+
       return uploadResult;
     } catch (error) {
       await ctx.runMutation(internal.content.updateIdeaStatus, {
@@ -404,6 +409,11 @@ export const uploadToYouTube: any = action({
         status: "error",
         message: `YouTube upload failed: ${error.message}`,
         metadata: { error: error.message, ideaId },
+      });
+
+      // Trigger video failed notification
+      await ctx.scheduler.runAfter(0, internal.notifications.triggerVideoFailedNotification, {
+        ideaId
       });
 
       throw error;
