@@ -27,11 +27,30 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
     
     setIsGenerating(true)
     try {
-      // This would trigger the idea generation workflow
-      console.log('Generating ideas for user:', user._id)
-      // The actual implementation would call the Convex action
+      // Call the Convex action to generate ideas
+      const response = await fetch('/api/convex/generate-ideas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate ideas: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      console.log('Generated ideas:', result)
+      
+      // Show success message
+      alert(`Succesvol ${result.count || 'meerdere'} nieuwe video ideeën gegenereerd!`)
+      
     } catch (error) {
       console.error('Failed to generate ideas:', error)
+      alert('Er ging iets mis bij het genereren van ideeën. Probeer het opnieuw.')
     } finally {
       setIsGenerating(false)
     }
