@@ -18,7 +18,8 @@
       "Bash(npm install:*)",
       "Bash(vercel:*)",
       "Bash(node:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npm run seed:postgres:*)"
     ],
     "deny": []
   }

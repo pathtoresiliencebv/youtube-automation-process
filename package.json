@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "seed:postgres": "node scripts/seed-database.js",
+    "seed:convex": "node scripts/seed-convex.js",
+    "seed:all": "npm run seed:postgres && npm run seed:convex"
   },
   "dependencies": {
     "next": "14.2.5",

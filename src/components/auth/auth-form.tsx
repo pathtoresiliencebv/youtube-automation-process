@@ -48,10 +48,17 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
   }
 
   const handleGoogleAuth = () => {
-    // Implement Google OAuth flow for YouTube access
+    // Check if client ID is configured
     const clientId = process.env.NEXT_PUBLIC_YOUTUBE_CLIENT_ID
-    const redirectUri = `${window.location.origin}/auth/callback`
-    const scope = 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload'
+    
+    if (!clientId || clientId === 'your-actual-youtube-client-id') {
+      alert('YouTube Client ID is nog niet geconfigureerd. Ga naar Vercel Dashboard → Settings → Environment Variables om de echte waarden in te stellen.')
+      return
+    }
+    
+    // Implement Google OAuth flow for YouTube access
+    const redirectUri = `${window.location.origin}/api/auth/callback`
+    const scope = 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/yt-analytics.readonly'
     
     const authUrl = `https://accounts.google.com/o/oauth2/auth?` +
       `client_id=${clientId}&` +
