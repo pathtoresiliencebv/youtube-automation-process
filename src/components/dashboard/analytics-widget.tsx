@@ -120,7 +120,7 @@ export function AnalyticsWidget({ user }: AnalyticsWidgetProps) {
                 <div className="flex items-center justify-center mb-1">
                   <TrendingUp className="w-4 h-4 text-purple-500 mr-1" />
                 </div>
-                <div className="text-lg font-semibold">{avgPerformanceScore.toFixed(1)}</div>
+                <div className="text-lg font-semibold">{(avgPerformanceScore || 0).toFixed(1)}</div>
                 <div className="text-xs text-gray-500">Avg Score</div>
               </div>
             </div>
@@ -170,19 +170,19 @@ export function AnalyticsWidget({ user }: AnalyticsWidgetProps) {
               </h4>
               <div className="space-y-2 max-h-20 overflow-y-auto">
                 {topVideos.slice(0, 3).map((video, index) => (
-                  <div key={video._id} className="flex items-center justify-between text-xs">
+                  <div key={video._id || video.id || index} className="flex items-center justify-between text-xs">
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
                       <span className="flex-shrink-0 w-4 h-4 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium">
                         {index + 1}
                       </span>
-                      <span className="truncate" title={video.title}>
-                        {video.title}
+                      <span className="truncate" title={video?.title || 'Geen titel'}>
+                        {video?.title || 'Geen titel'}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2 text-gray-500 flex-shrink-0">
-                      <span>{formatNumber(video.views)}</span>
+                      <span>{formatNumber(video?.views)}</span>
                       <span className="font-medium text-green-600">
-                        {video.performanceScore.toFixed(1)}
+                        {(video?.performanceScore || video?.performance_score || 0).toFixed(1)}
                       </span>
                     </div>
                   </div>

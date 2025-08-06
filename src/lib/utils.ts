@@ -15,14 +15,15 @@ export function formatDate(timestamp: number): string {
   })
 }
 
-export function formatNumber(num: number): string {
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M'
+export function formatNumber(num: number | undefined | null): string {
+  const safeNum = num || 0
+  if (safeNum >= 1000000) {
+    return (safeNum / 1000000).toFixed(1) + 'M'
   }
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'K'
+  if (safeNum >= 1000) {
+    return (safeNum / 1000).toFixed(1) + 'K'
   }
-  return num.toString()
+  return safeNum.toString()
 }
 
 export function getStatusColor(status: string): string {
