@@ -31,16 +31,16 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
           <div className="text-center max-w-md mx-auto p-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
-              🤖 YouTube Automation Loading...
+              ❌ Er is een fout opgetreden
             </h1>
             <p className="text-gray-600 mb-6">
-              Het systeem wordt geïnitialiseerd. Even geduld...
+              Het systeem kon niet worden geladen. Probeer de pagina te vernieuwen.
             </p>
             <button 
               onClick={() => window.location.reload()} 
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
             >
-              Vernieuwen
+              Pagina vernieuwen
             </button>
           </div>
         </div>

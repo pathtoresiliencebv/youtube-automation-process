@@ -39,9 +39,6 @@ export default function HomePage() {
       return
     }
 
-    // Small delay to ensure client-side hydration
-    await new Promise(resolve => setTimeout(resolve, 100))
-
     // Check for existing authentication in localStorage first
     try {
       const storedUser = localStorage.getItem('user')
@@ -49,7 +46,7 @@ export default function HomePage() {
         const userData = JSON.parse(storedUser)
         if (userData && userData.id) {
           console.log('Found user in localStorage:', userData)
-          // User is authenticated, redirect to dashboard
+          // User is authenticated, redirect to dashboard immediately
           router.push('/dashboard')
           return
         }
@@ -65,7 +62,7 @@ export default function HomePage() {
         const userData = await response.json()
         if (userData && userData.id) {
           console.log('Found user via API:', userData)
-          // User is authenticated, redirect to dashboard
+          // User is authenticated, redirect to dashboard immediately
           router.push('/dashboard')
           return
         }
@@ -74,8 +71,7 @@ export default function HomePage() {
       console.error('Auth check failed:', error)
     }
 
-    // No authentication found, show login form
-    console.log('No authentication found, showing login form')
+    // No authentication found, show login form immediately
     setIsLoading(false)
   }
 
@@ -85,15 +81,7 @@ export default function HomePage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner />
-          <p className="mt-4 text-gray-600">🤖 Starting YouTube Automation System...</p>
-          <p className="mt-2 text-sm text-gray-500">Checking authentication...</p>
-        </div>
-      </div>
-    )
+    return null // Geen laadscherm, direct doorsturen
   }
 
   return (
