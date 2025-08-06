@@ -16,8 +16,8 @@ npm run type-check   # TypeScript check
 ### Database Management
 ```bash
 npm run seed:postgres    # Seed Neon PostgreSQL database
-npm run seed:convex     # Seed Convex database 
-npm run seed:all        # Seed both databases
+npm run seed:convex      # Seed Convex database 
+npm run seed:all         # Seed both databases
 node scripts/create-test-user.js  # Create test user account
 ```
 
@@ -38,70 +38,90 @@ vercel env add VARIABLE_NAME production  # Add environment variables
 ### Dual Database System
 The application uses a hybrid database architecture:
 
-- **Neon PostgreSQL**: Primary user authentication and data storage
-  - User accounts with credentials stored in `preferences` JSON field
-  - YouTube channel connection data
-  - Production-ready with proper schemas
+- **Neon PostgreSQL**: Primary user authentication and persistent data storage
+  - User accounts with credentials stored in `preferences` JSON field  
+  - YouTube channel connection data (channel_id, channel_title)
+  - Simple authentication via custom API endpoints (`/api/auth/signin`, `/api/auth/signup`)
   
-- **Convex**: Real-time features and AI-generated content
-  - Video ideas and content generation workflows
-  - Real-time dashboard updates
-  - System logging and analytics
-  - RevID job tracking
+- **Convex**: Real-time features, AI workflows, and analytics
+  - Video ideas with comprehensive status tracking (pending_approval → approved → script_generated → video_creating → published)
+  - Real-time dashboard updates using Convex queries
+  - System logging and performance analytics
+  - RevID job tracking and webhook handling
+  - Content analysis, optimizations, and calendar management
 
-### Authentication Flow
-1. **User Registration/Login**: Custom API endpoints (`/api/auth/signup`, `/api/auth/signin`) using Neon PostgreSQL
-2. **Session Management**: localStorage-based session persistence 
-3. **YouTube OAuth**: Separate OAuth flow for YouTube API access via Google Cloud Console
-4. **Dashboard Access**: User prop passed down to all dashboard widgets instead of Convex queries
+### Authentication Flow (Recently Updated)
+1. **Primary Login**: Simple email/password authentication via `/api/auth/signin` using Neon PostgreSQL
+   - Passwords stored in user `preferences` JSON field
+   - Session stored in localStorage for client-side persistence
+   - User object passed as props to all dashboard components
+2. **Dashboard Access**: Dashboard loads immediately after login, without requiring YouTube connection
+3. **YouTube OAuth**: Optional secondary authentication for YouTube API access via dashboard widget
+   - Handled through YouTube Connect Widget on dashboard
+   - Users can use the platform without YouTube connection
+   - OAuth redirect: `/api/auth/callback` → `/auth/callback` → dashboard with connection status
 
 ### Content Generation Pipeline
-The system follows a 7-stage automated workflow:
+The system follows a comprehensive automated workflow:
 
-1. **Analysis**: Fetch top-performing YouTube videos from user's channel (last 30 days)
-2. **AI Generation**: Gemini 2.5 Pro generates new video titles based on successful patterns
-3. **Manual Approval**: User reviews and approves AI-generated ideas via dashboard
-4. **Script Generation**: Auto-generate 2-minute scripts for approved titles
-5. **Video Creation**: RevID API creates PIXAR-style videos from scripts
-6. **SEO Optimization**: Generate optimized titles, descriptions, and tags
-7. **Upload & Schedule**: Automatic YouTube upload and scheduling (daily at 00:00)
+1. **Analysis**: YouTube Data API fetches top-performing videos from user's channel (last 30 days)
+2. **AI Generation**: Google Gemini 2.5 Pro generates new video titles based on successful patterns
+3. **Manual Approval**: User reviews and approves/rejects AI-generated ideas via dashboard
+4. **Script Generation**: Auto-generate 2-minute scripts for approved video titles
+5. **Video Creation**: RevID API creates PIXAR-style videos from generated scripts  
+6. **SEO Optimization**: Generate optimized titles, descriptions, and tags using AI
+7. **Upload & Schedule**: Automatic YouTube upload and scheduling system
 
-### Key Components Architecture
+### Key Components
 
 #### Dashboard System (`src/components/dashboard/`)
-- **dashboard.tsx**: Main dashboard container, passes user prop to all widgets
-- **video-ideas-widget.tsx**: Displays AI-generated ideas for approval/rejection
-- **production-pipeline-widget.tsx**: Real-time production status tracking
-- **publication-calendar-widget.tsx**: Scheduled content calendar view
-- **analytics-widget.tsx**: Performance metrics and charts
-- **youtube-connect-widget.tsx**: YouTube OAuth connection management
+- **dashboard.tsx**: Main container, gracefully handles missing Convex data, shows metrics as 0 when no data available
+- **video-ideas-widget.tsx**: AI-generated ideas approval/rejection interface (requires YouTube connection)
+- **production-pipeline-widget.tsx**: Real-time production status tracking 
+- **analytics-widget.tsx**: Performance metrics and charts using Recharts
+- **youtube-connect-widget.tsx**: **Primary connection interface** - handles optional YouTube OAuth from dashboard
+- **ai-optimization-widget.tsx**: Content optimization and performance insights
+- **content-calendar-widget.tsx**: Smart calendar with AI-driven scheduling
+- **bulk-management-widget.tsx**: Batch operations for video management
+- **notifications-widget.tsx**: Real-time notifications and settings
+
+#### Authentication Components (`src/components/auth/`)
+- **simple-auth-form.tsx**: Primary login form with email/password (no YouTube OAuth required)
+- **auth-form.tsx**: Legacy OAuth-first form (deprecated in favor of simple-auth-form)
 
 #### API Structure (`src/app/api/`)
-- **auth/**: Custom authentication endpoints (signup/signin)
-- **youtube/**: YouTube Data API integration (analyze, upload)
-- **gemini/**: Google Gemini AI integration (ideas, scripts, SEO)
-- **webhooks/revid**: RevID webhook handling for video creation status
-- **seed**: Database seeding endpoint for Convex
+- **auth/**: Custom authentication system using Neon PostgreSQL
+  - `/signin`: Email/password authentication with localStorage session
+  - `/signup`: User registration
+  - `/me`: Session validation (fallback, primary auth is localStorage)
+  - `/logout`: Session cleanup
+  - `/oauth-complete`: Handles YouTube OAuth completion and user updates
+- **youtube/**: YouTube Data API integration (analyze, upload, analytics)  
+- **gemini/**: Google Gemini AI integration (ideas, scripts, SEO, content optimization)
+- **webhooks/revid/**: RevID webhook handling for video creation status updates
+- **convex/**: Proxy endpoints for Convex operations (generate-ideas, create-video, reject-idea)
+- **admin/**: Admin panel endpoints (system health, logs export)
+- **bulk/**: Batch operations API for managing multiple videos
+- **notifications/**: Email notification system using Resend API
 
 #### Convex Backend (`convex/`)
-- **schema.ts**: Database schema definitions with proper indexing
-- **users.ts**: User management functions (note: getCurrentUser not used in production)
-- **content.ts**: Video ideas and content generation workflows
-- **youtube.ts**: YouTube analytics and data processing
-- **revid.ts**: RevID API integration and job management
-- **systemLogs.ts**: Application logging and monitoring
+Key schema tables with proper indexing:
+- **videoIdeas**: Complete video lifecycle tracking with 12 status states
+- **youtubeAnalytics**: Performance data from YouTube API
+- **systemLogs**: Application logging and monitoring
+- **contentAnalysis**: AI-driven content insights and recommendations  
+- **contentOptimizations**: AI optimization results and performance predictions
+- **contentCalendars**: Smart scheduling with AI-based timing optimization
+- **notifications**: Real-time notification system
 
-### Environment Configuration
-
-Required environment variables across development and production:
+### Environment Variables
 
 ```env
-# Convex Real-time Backend
-CONVEX_DEPLOYMENT=your-deployment-name
-NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.site
-
-# Neon PostgreSQL Database
+# Database
 DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
+
+# Convex Real-time Backend  
+NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.site
 
 # YouTube API (Google Cloud Console)
 YOUTUBE_CLIENT_ID=your-client-id
@@ -116,32 +136,53 @@ NEXT_PUBLIC_GEMINI_API_KEY=your-gemini-key
 REVID_API_KEY=your-revid-key
 NEXT_PUBLIC_REVID_API_KEY=your-revid-key
 
+# Email Service (Resend)
+RESEND_API_KEY=your-resend-key
+
 # Application URL for OAuth callbacks
 NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
 ```
 
-## Important Implementation Notes
+## Important Implementation Details
 
-### Authentication System Migration
-The codebase was migrated from Stack Auth to custom Neon database authentication due to build compatibility issues. All dashboard widgets now receive user data as props instead of using Convex `getCurrentUser` queries.
+### Authentication System (Two-Tier Architecture)
+**Primary Authentication**: Simple email/password login via Neon PostgreSQL with passwords in user `preferences` JSON field.
+- **Session Management**: localStorage-based with fallback to server-side cookie validation
+- **Dashboard Access**: Immediate access after login, no external dependencies required
+- **User Propagation**: User object passed as props to all dashboard widgets
 
-### YouTube OAuth Setup
-Google Cloud Console OAuth setup requires:
-1. Authorized JavaScript origins: `https://your-domain.vercel.app`
-2. Authorized redirect URIs: `https://your-domain.vercel.app/api/auth/callback`
-3. Enable YouTube Data API v3 and YouTube Analytics API
+**Secondary Authentication**: Optional YouTube OAuth for API access
+- **Trigger**: User-initiated via YouTube Connect Widget on dashboard
+- **Flow**: Google OAuth → `/api/auth/callback` → `/auth/callback` page → database update → dashboard refresh
+- **Storage**: YouTube channel data saved to PostgreSQL user record (youtubeChannelId, youtubeChannelTitle)
 
-### Convex vs PostgreSQL Usage
-- Use **Convex** for: Real-time features, AI content workflows, system logs
-- Use **PostgreSQL** for: User authentication, persistent user data, YouTube channel connections
+### Database Usage Patterns
+- **PostgreSQL**: User auth, YouTube channel connections, persistent user data
+- **Convex**: Real-time features, video workflows, analytics, system logs, AI optimizations
 
-### Error Handling
-All components include ErrorBoundary wrappers. The dashboard widgets gracefully handle missing Convex data and display loading states appropriately.
+### Video Status Lifecycle
+Videos flow through 12 distinct statuses: pending_approval → approved → script_generated → video_creating → video_completed → uploading → generating_seo → scheduled → published (with error states: failed, pending_retry, unrecoverable).
+
+### RevID Integration
+Video creation handled via RevID API with webhook callbacks updating video status in real-time through `/api/webhooks/revid`.
+
+### AI Content Optimization
+Advanced AI features including content analysis, performance predictions, optimal timing recommendations, and smart calendar generation using Google Gemini 2.5 Pro.
+
+### Development Workflow
+1. **Quick Start**: Use test account for immediate access to dashboard
+2. **YouTube Setup**: Optional - configure YouTube OAuth for full functionality
+3. **Convex Setup**: Optional - for real-time features and data persistence
 
 ### Test User Account
-Default test credentials for development:
+Development credentials (pre-configured):
 - Email: `pathtoresiliencebv@gmail.com`
 - Password: `6fz9itxv1`
 - Name: `Path to Resilience`
+- Created via: `node scripts/create-test-user.js`
 
-This account is automatically created via `scripts/create-test-user.js` during setup.
+### Current Authentication State
+The system now uses a **separated authentication approach**:
+- **Step 1**: Login with email/password → Access dashboard immediately
+- **Step 2**: (Optional) Connect YouTube via dashboard widget → Enable video features
+- **Benefit**: Users can explore the dashboard and interface without external API setup

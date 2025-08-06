@@ -1,7 +1,6 @@
 'use client'
 
-import { useQuery } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { formatNumber } from '@/lib/utils'
@@ -13,12 +12,33 @@ interface AnalyticsWidgetProps {
 }
 
 export function AnalyticsWidget({ user }: AnalyticsWidgetProps) {
-  const topVideos = useQuery(
-    api.youtube.getTopVideos,
-    user ? { userId: user.id, limit: 5 } : 'skip'
-  )
+  const [topVideos, setTopVideos] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  // Generate mock analytics data for chart
+  // Fetch analytics data from Neon API
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      if (!user?.id) return
+      
+      try {
+        const response = await fetch(`/api/analytics?userId=${user.id}`)
+        if (response.ok) {
+          const analytics = await response.json()
+          setTopVideos(analytics.topVideos || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error)
+        // Use mock data as fallback
+        setTopVideos([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAnalytics()
+  }, [user?.id])
+
+  // Generate mock analytics data for chart (for now)
   const chartData = Array.from({ length: 7 }, (_, i) => ({
     date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric' }),
     views: Math.floor(Math.random() * 5000) + 1000,
@@ -26,12 +46,25 @@ export function AnalyticsWidget({ user }: AnalyticsWidgetProps) {
   }))
 
   // Calculate summary statistics
-  const totalViews = topVideos?.reduce((sum, video) => sum + video.views, 0) || 0
+  const totalViews = topVideos?.reduce((sum, video) => sum + (video.views || 0), 0) || 0
   const avgPerformanceScore = topVideos?.length ? 
-    topVideos.reduce((sum, video) => sum + video.performanceScore, 0) / topVideos.length : 0
-  const totalWatchTime = topVideos?.reduce((sum, video) => sum + video.watchTime, 0) || 0
+    topVideos.reduce((sum, video) => sum + (video.performance_score || 0), 0) / topVideos.length : 0
+  const totalWatchTime = topVideos?.reduce((sum, video) => sum + (video.watch_time || 0), 0) || 0
 
   if (!user) {
+    return (
+      <Card className="h-96">
+        <CardHeader>
+          <CardTitle>Performance Analytics</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Geen gebruiker ingelogd</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (loading) {
     return (
       <Card className="h-96">
         <CardHeader>

@@ -15,10 +15,24 @@ export default function DashboardPage() {
 
   const checkAuthStatus = async () => {
     try {
+      // First check localStorage
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        const userData = JSON.parse(storedUser)
+        if (userData.id) {
+          setUser(userData)
+          setLoading(false)
+          return
+        }
+      }
+
+      // Fallback to server-side check
       const response = await fetch('/api/auth/me')
       if (response.ok) {
         const userData = await response.json()
         setUser(userData)
+        // Store in localStorage for next time
+        localStorage.setItem('user', JSON.stringify(userData))
       }
     } catch (error) {
       console.error('Auth check failed:', error)
@@ -29,7 +43,12 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     try {
+      // Clear localStorage
+      localStorage.removeItem('user')
+      
+      // Clear server session
       await fetch('/api/auth/logout', { method: 'POST' })
+      
       setUser(null)
       window.location.href = '/'
     } catch (error) {
@@ -39,6 +58,8 @@ export default function DashboardPage() {
 
   const handleUpdateUser = (userData: any) => {
     setUser(userData)
+    // Update localStorage
+    localStorage.setItem('user', JSON.stringify(userData))
   }
 
   if (loading) {

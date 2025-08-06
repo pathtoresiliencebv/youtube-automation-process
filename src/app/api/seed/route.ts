@@ -1,32 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ConvexHttpClient } from 'convex/browser';
-import { api } from '../../../../convex/_generated/api';
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!, {
-  skipConvexDeploymentUrlCheck: true
-});
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🌱 Starting Convex database seeding...');
-    
-    const result = await convex.mutation(api.seedData.seedDatabase, {});
-    
-    console.log('✅ Convex seeding completed:', result);
+    console.log('🌱 Convex seeding disabled - using Neon PostgreSQL now');
     
     return NextResponse.json({
       success: true,
-      message: 'Convex database seeded successfully!',
-      data: result.data
+      message: 'Seeding disabled - system now uses Neon PostgreSQL instead of Convex',
+      note: 'Use the specific table seeding endpoints: /api/seed-ai-tables, /api/seed-calendar-table, etc.'
     });
 
   } catch (error) {
-    console.error('❌ Convex seeding failed:', error);
+    console.error('❌ Seed endpoint error:', error);
     
     return NextResponse.json(
       { 
         success: false,
-        error: 'Failed to seed Convex database',
+        error: 'Seed endpoint disabled',
         details: error.message 
       },
       { status: 500 }
@@ -36,8 +26,13 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   return NextResponse.json({
-    message: 'Convex Seeding Endpoint',
-    usage: 'POST to this endpoint to seed the Convex database with sample data',
-    status: 'ready'
+    message: 'Database Seeding Endpoints',
+    usage: 'System now uses Neon PostgreSQL. Use specific table seeding endpoints instead.',
+    endpoints: {
+      'AI Tables': 'POST /api/seed-ai-tables',
+      'Calendar Table': 'POST /api/seed-calendar-table', 
+      'Notification Settings': 'POST /api/seed-notification-settings-table'
+    },
+    status: 'migrated-to-neon'
   });
 }

@@ -1,10 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ConvexHttpClient } from 'convex/browser';
-import { api } from '../../../../../convex/_generated/api';
+import { Client } from 'pg';
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!, {
-  skipConvexDeploymentUrlCheck: true
-});
+async function handleRevIdWebhook(jobId: string, status: string, data: any) {
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+  })
+
+  await client.connect()
+
+  try {
+    if (status === 'completed') {
+      // Update video idea with completed video
+      await client.query(
+        `UPDATE video_ideas 
+         SET video_url = $1, status = 'video_completed', updated_at = NOW() 
+         WHERE revid_job_id = $2`,
+        [data.videoUrl, jobId]
+      )
+    } else if (status === 'failed') {
+      // Mark video as failed
+      await client.query(
+        `UPDATE video_ideas 
+         SET status = 'failed', error_message = $1, updated_at = NOW() 
+         WHERE revid_job_id = $2`,
+        [data.error, jobId]
+      )
+    }
+
+    // Log the webhook event
+    await client.query(
+      `INSERT INTO system_logs (action, level, message, metadata, created_at) 
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [
+        'revid_webhook',
+        status === 'failed' ? 'error' : 'info',
+        `RevID job ${jobId} ${status}`,
+        JSON.stringify({ jobId, status, ...data })
+      ]
+    )
+  } finally {
+    await client.end()
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,11 +85,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Handle successful video creation
-        await convex.action(api.revid.handleWebhook, {
-          jobId,
-          status: 'completed',
-          videoUrl,
-        });
+        await handleRevIdWebhook(jobId, 'completed', { videoUrl });
 
         console.log(`RevID job ${jobId} completed successfully. Video URL: ${videoUrl}`);
         break;
@@ -60,11 +93,7 @@ export async function POST(request: NextRequest) {
       case 'failed':
       case 'error':
         // Handle failed video creation
-        await convex.action(api.revid.handleWebhook, {
-          jobId,
-          status: 'failed',
-          error: error || 'Video creation failed',
-        });
+        await handleRevIdWebhook(jobId, 'failed', { error: error || 'Video creation failed' });
 
         console.error(`RevID job ${jobId} failed:`, error);
         break;

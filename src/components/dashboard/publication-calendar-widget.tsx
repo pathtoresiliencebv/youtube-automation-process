@@ -1,7 +1,6 @@
 'use client'
 
-import { useQuery } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { formatDate } from '@/lib/utils'
@@ -14,17 +13,36 @@ interface PublicationCalendarWidgetProps {
 }
 
 export function PublicationCalendarWidget({ user }: PublicationCalendarWidgetProps) {
-  const scheduledVideos = useQuery(
-    api.content.getVideoIdeasByUser,
-    user ? { userId: user.id, status: 'scheduled' } : 'skip'
-  )
+  const [scheduledVideos, setScheduledVideos] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch scheduled videos from Neon API
+  useEffect(() => {
+    const fetchScheduledVideos = async () => {
+      if (!user?.id) return
+      
+      try {
+        const response = await fetch(`/api/video-ideas?userId=${user.id}&status=scheduled`)
+        if (response.ok) {
+          const videos = await response.json()
+          setScheduledVideos(videos)
+        }
+      } catch (error) {
+        console.error('Failed to fetch scheduled videos:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchScheduledVideos()
+  }, [user?.id])
 
   // Generate upcoming schedule for next 7 days
   const upcomingDays = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(startOfDay(new Date()), i)
     const videosForDay = scheduledVideos?.filter(video => 
-      video.scheduledDate && 
-      startOfDay(new Date(video.scheduledDate)).getTime() === date.getTime()
+      video.scheduled_date && 
+      startOfDay(new Date(video.scheduled_date)).getTime() === date.getTime()
     ) || []
     
     return {
@@ -34,6 +52,19 @@ export function PublicationCalendarWidget({ user }: PublicationCalendarWidgetPro
   })
 
   if (!user) {
+    return (
+      <Card className="h-96">
+        <CardHeader>
+          <CardTitle>Publicatiekalender</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Geen gebruiker ingelogd</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (loading) {
     return (
       <Card className="h-96">
         <CardHeader>

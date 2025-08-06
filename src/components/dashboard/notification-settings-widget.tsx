@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useQuery, useMutation } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -23,20 +21,31 @@ export function NotificationSettingsWidget({ user }: NotificationSettingsWidgetP
   const [isUpdating, setIsUpdating] = useState(false)
   const [localSettings, setLocalSettings] = useState<any>(null)
 
-  // Get current notification settings
-  const notificationSettings = useQuery(
-    api.notifications.getNotificationSettings,
-    user ? { userId: user.id } : 'skip'
-  )
+  const [notificationSettings, setNotificationSettings] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  // Mutation to update settings
-  const updateSettings = useMutation(api.notifications.updateNotificationSettings)
-
+  // Fetch notification settings
   useEffect(() => {
-    if (notificationSettings) {
-      setLocalSettings(notificationSettings)
+    const fetchSettings = async () => {
+      if (!user?.id) return
+      
+      try {
+        const response = await fetch(`/api/notification-settings?userId=${user.id}`)
+        if (response.ok) {
+          const settings = await response.json()
+          setNotificationSettings(settings)
+          setLocalSettings(settings)
+        }
+      } catch (error) {
+        console.error('Failed to fetch notification settings:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [notificationSettings])
+
+    fetchSettings()
+  }, [user?.id])
+
 
   const handleToggle = (key: string, value?: string) => {
     if (!localSettings) return
@@ -67,13 +76,23 @@ export function NotificationSettingsWidget({ user }: NotificationSettingsWidgetP
 
     setIsUpdating(true)
     try {
-      await updateSettings({
-        userId: user.id,
-        settings: localSettings
+      const response = await fetch('/api/notification-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          settings: localSettings
+        })
       })
-      
-      // Show success message
-      alert('Notificatie instellingen succesvol bijgewerkt!')
+
+      if (response.ok) {
+        setNotificationSettings(localSettings)
+        alert('Notificatie instellingen succesvol bijgewerkt!')
+      } else {
+        throw new Error('Failed to update settings')
+      }
       
     } catch (error) {
       console.error('Failed to update notification settings:', error)

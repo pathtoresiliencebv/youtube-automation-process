@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ConvexHttpClient } from 'convex/browser'
-import { api } from '../../../../../convex/_generated/api'
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!, {
-  skipConvexDeploymentUrlCheck: true
-})
+import { Client } from 'pg'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,22 +17,67 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Export system data using Convex action
-    const exportResult = await convex.action(api.admin.exportSystemData, {
-      dataType: dataType as any,
-      format,
-      timeRange,
-      adminUserId: adminUserId as any,
+    const client = new Client({
+      connectionString: process.env.DATABASE_URL,
     })
 
-    // Set appropriate headers for download
-    const headers = new Headers({
-      'Content-Type': format === 'csv' ? 'text/csv' : 'application/json',
-      'Content-Disposition': `attachment; filename="${exportResult.filename}"`,
-      'X-Export-Count': exportResult.count.toString(),
-    })
+    await client.connect()
 
-    return new NextResponse(exportResult.data, { headers })
+    try {
+      // Calculate time range
+      let timeFilter = "created_at >= NOW() - INTERVAL '24 hours'"
+      switch (timeRange) {
+        case '1h':
+          timeFilter = "created_at >= NOW() - INTERVAL '1 hour'"
+          break
+        case '7d':
+          timeFilter = "created_at >= NOW() - INTERVAL '7 days'"
+          break
+        case '30d':
+          timeFilter = "created_at >= NOW() - INTERVAL '30 days'"
+          break
+      }
+
+      // Get system logs data
+      const result = await client.query(
+        `SELECT * FROM system_logs WHERE ${timeFilter} ORDER BY created_at DESC`
+      )
+
+      let exportData: string
+      let filename: string
+
+      if (format === 'csv') {
+        const headers = ['ID', 'User ID', 'Action', 'Level', 'Message', 'Created At']
+        const csvRows = [
+          headers.join(','),
+          ...result.rows.map(row => [
+            row.id,
+            row.user_id || '',
+            `"${row.action.replace(/"/g, '""')}"`,
+            row.level,
+            `"${row.message.replace(/"/g, '""')}"`,
+            row.created_at
+          ].join(','))
+        ]
+        exportData = csvRows.join('\n')
+        filename = `system_logs_${timeRange}.csv`
+      } else {
+        exportData = JSON.stringify(result.rows, null, 2)
+        filename = `system_logs_${timeRange}.json`
+      }
+
+      // Set appropriate headers for download
+      const headers = new Headers({
+        'Content-Type': format === 'csv' ? 'text/csv' : 'application/json',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'X-Export-Count': result.rowCount?.toString() || '0',
+      })
+
+      return new NextResponse(exportData, { headers })
+
+    } finally {
+      await client.end()
+    }
 
   } catch (error) {
     console.error('Export logs error:', error)

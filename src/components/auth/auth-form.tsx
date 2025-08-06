@@ -22,7 +22,7 @@ export function AuthForm() {
     
     // Use correct callback URL
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-    const redirectUri = `${appUrl}/auth/callback`
+    const redirectUri = `${appUrl}/api/auth/callback`
     const scope = 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/yt-analytics.readonly'
     
     const authUrl = `https://accounts.google.com/o/oauth2/auth?` +

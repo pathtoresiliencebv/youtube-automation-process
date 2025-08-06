@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ConvexHttpClient } from 'convex/browser'
-import { api } from '../../../../../convex/_generated/api'
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!, {
-  skipConvexDeploymentUrlCheck: true
-})
+import { Client } from 'pg'
 
 export const dynamic = 'force-dynamic'
 
 interface ServiceHealth {
-  convex: boolean
   postgres: boolean
   gemini: boolean
   revid: boolean
@@ -19,7 +13,6 @@ interface ServiceHealth {
 export async function GET(request: NextRequest) {
   try {
     const services: ServiceHealth = {
-      convex: false,
       postgres: false,
       gemini: false,
       revid: false,
@@ -28,25 +21,19 @@ export async function GET(request: NextRequest) {
 
     let overallStatus: 'healthy' | 'warning' | 'critical' = 'healthy'
 
-    // Check Convex connection
-    try {
-      await convex.query(api.admin.getSystemStats, { timeRange: '1h' })
-      services.convex = true
-    } catch (error) {
-      console.error('Convex health check failed:', error)
-      services.convex = false
-    }
-
     // Check PostgreSQL connection
     try {
-      if (process.env.DATABASE_URL) {
-        // Simple connection test - we'll assume it's healthy if the env var exists
-        // In a real implementation, you'd want to actually connect to the database
-        services.postgres = true
-      }
+      const client = new Client({
+        connectionString: process.env.DATABASE_URL,
+      })
+      await client.connect()
+      await client.query('SELECT 1')
+      await client.end()
+      services.postgres = true
     } catch (error) {
       console.error('PostgreSQL health check failed:', error)
       services.postgres = false
+      overallStatus = 'critical'
     }
 
     // Check Gemini API
@@ -126,7 +113,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       status: 'critical',
       services: {
-        convex: false,
         postgres: false,
         gemini: false,
         revid: false,

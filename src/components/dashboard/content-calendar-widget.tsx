@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery, useAction, useMutation } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -41,43 +39,69 @@ export function ContentCalendarWidget({ user }: ContentCalendarWidgetProps) {
     }
   })
 
-  // Get current content calendar
-  const contentCalendar = useQuery(
-    api.contentCalendar.getContentCalendar,
-    user ? { userId: user.id, status: 'active' } : 'skip'
-  )
+  const [contentCalendar, setContentCalendar] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  // Actions
-  const generateCalendar = useAction(api.contentCalendar.generateSmartCalendar)
-  const updateCalendarStatus = useMutation(api.contentCalendar.updateCalendarStatus)
-  const createVideoFromSlot = useAction(api.contentCalendar.createVideoFromCalendarSlot)
+  // Fetch content calendar
+  useEffect(() => {
+    const fetchCalendar = async () => {
+      if (!user?.id) return
+      
+      try {
+        const response = await fetch(`/api/content-calendar?userId=${user.id}&status=active`)
+        if (response.ok) {
+          const calendar = await response.json()
+          setContentCalendar(calendar)
+        }
+      } catch (error) {
+        console.error('Failed to fetch content calendar:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCalendar()
+  }, [user?.id])
 
   const handleGenerateCalendar = async () => {
     if (!user) return
     
     setIsGenerating(true)
     try {
-      const result = await generateCalendar({
-        userId: user.id,
-        weeks: calendarSettings.weeks,
-        videosPerWeek: calendarSettings.videosPerWeek,
-        preferences: {
-          optimalDays: calendarSettings.optimalDays,
-          optimalHours: calendarSettings.optimalHours,
-          contentMix: calendarSettings.contentMix
-        }
-      })
-      
-      // Activate the new calendar
-      if (result.calendarId) {
-        await updateCalendarStatus({
-          calendarId: result.calendarId,
-          status: 'active',
-          userId: user.id
+      const response = await fetch('/api/content-calendar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          action: 'generate',
+          data: {
+            weeks: calendarSettings.weeks,
+            videosPerWeek: calendarSettings.videosPerWeek,
+            preferences: {
+              optimalDays: calendarSettings.optimalDays,
+              optimalHours: calendarSettings.optimalHours,
+              contentMix: calendarSettings.contentMix
+            }
+          }
         })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        
+        // Refresh calendar data
+        const calendarResponse = await fetch(`/api/content-calendar?userId=${user.id}&status=active`)
+        if (calendarResponse.ok) {
+          const calendar = await calendarResponse.json()
+          setContentCalendar(calendar)
+        }
+        
+        alert(`Slimme content kalender gegenereerd! ${result.totalVideos} video's gepland over ${calendarSettings.weeks} weken.`)
+      } else {
+        throw new Error('Calendar generation failed')
       }
-      
-      alert(`Slimme content kalender gegenereerd! ${result.totalVideos} video's gepland over ${calendarSettings.weeks} weken.`)
     } catch (error) {
       console.error('Calendar generation failed:', error)
       alert('Er ging iets mis bij het genereren van de kalender. Probeer het opnieuw.')
@@ -90,14 +114,28 @@ export function ContentCalendarWidget({ user }: ContentCalendarWidgetProps) {
     if (!user || !contentCalendar) return
     
     try {
-      const result = await createVideoFromSlot({
-        calendarId: contentCalendar._id,
-        weekIndex,
-        videoIndex,
-        userId: user.id
+      const response = await fetch('/api/content-calendar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          action: 'create_video',
+          data: {
+            calendarId: contentCalendar.id,
+            weekIndex,
+            videoIndex
+          }
+        })
       })
-      
-      alert(`Video idee succesvol aangemaakt: ${result.videoSlot.concept.title}`)
+
+      if (response.ok) {
+        const result = await response.json()
+        alert(`Video idee succesvol aangemaakt: ${result.videoSlot.concept.title}`)
+      } else {
+        throw new Error('Video creation failed')
+      }
     } catch (error) {
       console.error('Video creation failed:', error)
       alert('Er ging iets mis bij het aanmaken van de video.')

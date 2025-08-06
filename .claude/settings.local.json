@@ -22,7 +22,9 @@
       "Bash(npm run seed:postgres:*)",
       "Bash(claude mcp add:*)",
       "Bash(npx vercel:*)",
-      "Bash(npx convex deploy)"
+      "Bash(npx convex deploy)",
+      "Bash(npm run dev:*)",
+      "Bash(psql:*)"
     ],
     "deny": []
   }

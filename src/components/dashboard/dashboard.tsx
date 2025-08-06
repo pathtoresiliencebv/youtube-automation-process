@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -26,12 +24,29 @@ interface DashboardProps {
 
 export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
   const [isGenerating, setIsGenerating] = useState(false)
+  const [allVideoIdeas, setAllVideoIdeas] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  // Get real data from Convex
-  const allVideoIdeas = useQuery(
-    api.content.getVideoIdeasByUser,
-    user ? { userId: user.id } : 'skip'
-  )
+  // Fetch video ideas from Neon PostgreSQL
+  useEffect(() => {
+    const fetchVideoIdeas = async () => {
+      if (!user?.id) return
+      
+      try {
+        const response = await fetch(`/api/video-ideas?userId=${user.id}`)
+        if (response.ok) {
+          const ideas = await response.json()
+          setAllVideoIdeas(ideas)
+        }
+      } catch (error) {
+        console.error('Failed to fetch video ideas:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchVideoIdeas()
+  }, [user?.id])
 
   // Calculate metrics from real data
   const pendingIdeas = allVideoIdeas?.filter(idea => idea.status === 'pending_approval') || []
@@ -52,8 +67,8 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
     
     setIsGenerating(true)
     try {
-      // Call the Convex action to generate ideas
-      const response = await fetch('/api/convex/generate-ideas', {
+      // Generate ideas via Neon API
+      const response = await fetch('/api/gemini/generate-ideas', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,6 +84,13 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
 
       const result = await response.json()
       console.log('Generated ideas:', result)
+      
+      // Refresh the video ideas data
+      const ideasResponse = await fetch(`/api/video-ideas?userId=${user.id}`)
+      if (ideasResponse.ok) {
+        const ideas = await ideasResponse.json()
+        setAllVideoIdeas(ideas)
+      }
       
       // Show success message
       alert(`Succesvol ${result.count || 'meerdere'} nieuwe video ideeën gegenereerd!`)
@@ -144,6 +166,7 @@ export function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
         {/* Status Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>

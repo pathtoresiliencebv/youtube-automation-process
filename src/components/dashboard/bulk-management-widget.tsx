@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useQuery } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -23,13 +21,13 @@ interface BulkManagementWidgetProps {
 }
 
 interface VideoIdea {
-  _id: string
+  id: string
   title: string
   status: string
-  createdAt: number
-  youtubeVideoId?: string
+  created_at: string
+  youtube_video_id?: string
   error?: string
-  performanceScore?: number
+  performance_score?: number
 }
 
 export function BulkManagementWidget({ user }: BulkManagementWidgetProps) {
@@ -43,24 +41,56 @@ export function BulkManagementWidget({ user }: BulkManagementWidgetProps) {
   const [currentPage, setCurrentPage] = useState(0)
   const pageSize = 20
 
-  // Get filtered video ideas
-  const { ideas = [], total = 0, hasMore = false } = useQuery(
-    api.bulkOperations.getVideoIdeasWithFilters,
-    user ? {
-      userId: user.id,
-      status: filters.status.length > 0 ? filters.status : undefined,
-      hasYouTubeVideo: filters.hasYouTubeVideo,
-      hasError: filters.hasError,
-      limit: pageSize,
-      offset: currentPage * pageSize,
-    } : 'skip'
-  ) || {}
+  const [ideas, setIdeas] = useState<VideoIdea[]>([])
+  const [total, setTotal] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  // Fetch filtered video ideas
+  useEffect(() => {
+    const fetchIdeas = async () => {
+      if (!user?.id) return
+      
+      setLoading(true)
+      try {
+        const params = new URLSearchParams({
+          userId: user.id,
+          limit: pageSize.toString(),
+          offset: (currentPage * pageSize).toString()
+        })
+        
+        if (filters.status.length > 0) {
+          params.append('status', filters.status.join(','))
+        }
+        if (filters.hasYouTubeVideo !== undefined) {
+          params.append('hasYouTubeVideo', filters.hasYouTubeVideo.toString())
+        }
+        if (filters.hasError !== undefined) {
+          params.append('hasError', filters.hasError.toString())
+        }
+        
+        const response = await fetch(`/api/video-ideas?${params}`)
+        if (response.ok) {
+          const data = await response.json()
+          setIdeas(data.ideas || data) // Support both paginated and simple array response
+          setTotal(data.total || data.length)
+          setHasMore(data.hasMore || false)
+        }
+      } catch (error) {
+        console.error('Failed to fetch video ideas:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchIdeas()
+  }, [user?.id, filters, currentPage])
 
   const handleSelectAll = () => {
     if (selectedIds.length === ideas.length) {
       setSelectedIds([])
     } else {
-      setSelectedIds(ideas.map((idea: VideoIdea) => idea._id))
+      setSelectedIds(ideas.map((idea: VideoIdea) => idea.id))
     }
   }
 
@@ -317,15 +347,15 @@ export function BulkManagementWidget({ user }: BulkManagementWidgetProps) {
         <div className="space-y-2 max-h-96 overflow-y-auto">
           {ideas.map((idea: VideoIdea) => (
             <div
-              key={idea._id}
+              key={idea.id}
               className={`p-3 border rounded-lg flex items-center space-x-3 hover:bg-gray-50 ${
-                selectedIds.includes(idea._id) ? 'bg-blue-50 border-blue-200' : ''
+                selectedIds.includes(idea.id) ? 'bg-blue-50 border-blue-200' : ''
               }`}
             >
               <input
                 type="checkbox"
-                checked={selectedIds.includes(idea._id)}
-                onChange={() => handleSelectIdea(idea._id)}
+                checked={selectedIds.includes(idea.id)}
+                onChange={() => handleSelectIdea(idea.id)}
                 className="w-4 h-4"
               />
               
@@ -338,7 +368,7 @@ export function BulkManagementWidget({ user }: BulkManagementWidgetProps) {
                     {idea.error && (
                       <AlertTriangle className="w-4 h-4 text-red-500" title={idea.error} />
                     )}
-                    {idea.youtubeVideoId && (
+                    {idea.youtube_video_id && (
                       <div className="text-xs text-green-600">YouTube</div>
                     )}
                   </div>
@@ -351,7 +381,7 @@ export function BulkManagementWidget({ user }: BulkManagementWidgetProps) {
                     {idea.status}
                   </span>
                   <span className="text-xs text-gray-500">
-                    {formatDate(idea.createdAt)}
+                    {formatDate(new Date(idea.created_at).getTime())}
                   </span>
                 </div>
               </div>

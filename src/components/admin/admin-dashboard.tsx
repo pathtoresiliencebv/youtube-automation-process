@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useQuery } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -44,23 +42,55 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h')
 
-  // Get system statistics
-  const systemStats = useQuery(api.admin.getSystemStats, {
-    timeRange: selectedTimeRange
-  })
+  const [systemStats, setSystemStats] = useState(null)
+  const [errorLogs, setErrorLogs] = useState([])
+  const [activeJobs, setActiveJobs] = useState([])
+  const [performanceMetrics, setPerformanceMetrics] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  // Get error logs
-  const errorLogs = useQuery(api.admin.getErrorLogs, {
-    limit: 10
-  })
+  // Fetch admin data
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      if (!user?.id) return
+      
+      setLoading(true)
+      try {
+        // Fetch system statistics
+        const statsResponse = await fetch(`/api/admin/stats?timeRange=${selectedTimeRange}&adminUserId=${user.id}`)
+        if (statsResponse.ok) {
+          const stats = await statsResponse.json()
+          setSystemStats(stats)
+        }
 
-  // Get active jobs
-  const activeJobs = useQuery(api.admin.getActiveJobs, {})
+        // Fetch error logs
+        const logsResponse = await fetch(`/api/admin/error-logs?limit=10&adminUserId=${user.id}`)
+        if (logsResponse.ok) {
+          const logs = await logsResponse.json()
+          setErrorLogs(logs)
+        }
 
-  // Get performance metrics
-  const performanceMetrics = useQuery(api.admin.getPerformanceMetrics, {
-    timeRange: selectedTimeRange
-  })
+        // Fetch active jobs
+        const jobsResponse = await fetch(`/api/admin/active-jobs?adminUserId=${user.id}`)
+        if (jobsResponse.ok) {
+          const jobs = await jobsResponse.json()
+          setActiveJobs(jobs)
+        }
+
+        // Fetch performance metrics
+        const metricsResponse = await fetch(`/api/admin/performance?timeRange=${selectedTimeRange}&adminUserId=${user.id}`)
+        if (metricsResponse.ok) {
+          const metrics = await metricsResponse.json()
+          setPerformanceMetrics(metrics)
+        }
+      } catch (error) {
+        console.error('Failed to fetch admin data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAdminData()
+  }, [user?.id, selectedTimeRange])
 
   useEffect(() => {
     checkSystemHealth()
@@ -92,6 +122,38 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
   const handleRefreshStats = async () => {
     setIsRefreshing(true)
     await checkSystemHealth()
+    
+    // Refresh all admin data
+    if (user?.id) {
+      try {
+        const [statsRes, logsRes, jobsRes, metricsRes] = await Promise.all([
+          fetch(`/api/admin/stats?timeRange=${selectedTimeRange}&adminUserId=${user.id}`),
+          fetch(`/api/admin/error-logs?limit=10&adminUserId=${user.id}`),
+          fetch(`/api/admin/active-jobs?adminUserId=${user.id}`),
+          fetch(`/api/admin/performance?timeRange=${selectedTimeRange}&adminUserId=${user.id}`)
+        ])
+
+        if (statsRes.ok) {
+          const stats = await statsRes.json()
+          setSystemStats(stats)
+        }
+        if (logsRes.ok) {
+          const logs = await logsRes.json()
+          setErrorLogs(logs)
+        }
+        if (jobsRes.ok) {
+          const jobs = await jobsRes.json()
+          setActiveJobs(jobs)
+        }
+        if (metricsRes.ok) {
+          const metrics = await metricsRes.json()
+          setPerformanceMetrics(metrics)
+        }
+      } catch (error) {
+        console.error('Failed to refresh admin data:', error)
+      }
+    }
+    
     setTimeout(() => setIsRefreshing(false), 1000)
   }
 
@@ -363,11 +425,11 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {activeJobs && activeJobs.length > 0 ? (
                   activeJobs.map((job: any) => (
-                    <div key={job._id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <div key={job.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                       <div>
                         <div className="text-sm font-medium">{job.action}</div>
                         <div className="text-xs text-gray-500">
-                          {job.userId} • {new Date(job.createdAt).toLocaleTimeString('nl-NL')}
+                          {job.user_id} • {new Date(job.created_at).toLocaleTimeString('nl-NL')}
                         </div>
                       </div>
                       <div className={`px-2 py-1 rounded-full text-xs ${
@@ -406,14 +468,14 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {errorLogs && errorLogs.length > 0 ? (
                 errorLogs.map((log: any) => (
-                  <div key={log._id} className="p-3 border-l-4 border-red-400 bg-red-50 rounded">
+                  <div key={log.id} className="p-3 border-l-4 border-red-400 bg-red-50 rounded">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
                           <AlertTriangle className="w-4 h-4 text-red-500" />
                           <span className="font-medium text-sm">{log.action}</span>
                           <span className="text-xs text-gray-500">
-                            {new Date(log.createdAt).toLocaleString('nl-NL')}
+                            {new Date(log.created_at).toLocaleString('nl-NL')}
                           </span>
                         </div>
                         <p className="text-sm text-gray-700">{log.message}</p>

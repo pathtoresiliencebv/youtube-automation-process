@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery, useMutation } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -15,20 +13,34 @@ interface VideoIdeasWidgetProps {
 
 export function VideoIdeasWidget({ user }: VideoIdeasWidgetProps) {
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null)
-  const videoIdeas = useQuery(
-    api.content.getVideoIdeasByUser,
-    user ? { userId: user.id, status: 'pending_approval' } : 'skip'
-  )
-  
-  const approveIdea = useMutation(api.content.approveVideoIdea)
+  const [videoIdeas, setVideoIdeas] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch pending video ideas from Neon API
+  useEffect(() => {
+    const fetchVideoIdeas = async () => {
+      if (!user?.id) return
+      
+      try {
+        const response = await fetch(`/api/video-ideas?userId=${user.id}&status=pending_approval`)
+        if (response.ok) {
+          const ideas = await response.json()
+          setVideoIdeas(ideas)
+        }
+      } catch (error) {
+        console.error('Failed to fetch video ideas:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchVideoIdeas()
+  }, [user?.id])
 
   const handleApprove = async (ideaId: string) => {
     try {
-      // First approve the idea
-      await approveIdea({ ideaId })
-      
-      // Then start video creation process
-      const response = await fetch('/api/convex/create-video', {
+      // Approve the idea via Neon API
+      const response = await fetch('/api/video-ideas/approve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,13 +49,16 @@ export function VideoIdeasWidget({ user }: VideoIdeasWidgetProps) {
       })
 
       if (!response.ok) {
-        throw new Error(`Failed to start video creation: ${response.statusText}`)
+        throw new Error(`Failed to approve idea: ${response.statusText}`)
       }
 
       const result = await response.json()
-      console.log('Video creation started:', result)
+      console.log('Video idea approved:', result)
       
-      alert(`Video idee goedgekeurd! Script wordt gegenereerd en video creatie is gestart. Job ID: ${result.jobId}`)
+      // Update the local state
+      setVideoIdeas(prev => prev.filter(idea => idea.id !== ideaId))
+      
+      alert(`Video idee goedgekeurd! Het idee is nu goedgekeurd en kan verder verwerkt worden.`)
       
     } catch (error) {
       console.error('Failed to approve idea:', error)
@@ -53,7 +68,7 @@ export function VideoIdeasWidget({ user }: VideoIdeasWidgetProps) {
 
   const handleReject = async (ideaId: string) => {
     try {
-      const response = await fetch('/api/convex/reject-idea', {
+      const response = await fetch('/api/video-ideas/reject', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,7 +80,13 @@ export function VideoIdeasWidget({ user }: VideoIdeasWidgetProps) {
         throw new Error(`Failed to reject idea: ${response.statusText}`)
       }
 
-      alert('Video idee afgewezen')
+      const result = await response.json()
+      console.log('Video idea rejected:', result)
+      
+      // Update the local state
+      setVideoIdeas(prev => prev.filter(idea => idea.id !== ideaId))
+      
+      alert('Video idee afgewezen!')
       
     } catch (error) {
       console.error('Failed to reject idea:', error)
@@ -74,6 +95,19 @@ export function VideoIdeasWidget({ user }: VideoIdeasWidgetProps) {
   }
 
   if (!user) {
+    return (
+      <Card className="h-96">
+        <CardHeader>
+          <CardTitle>Nieuwe Ideeën</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Geen gebruiker ingelogd</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (loading) {
     return (
       <Card className="h-96">
         <CardHeader>

@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery, useMutation } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -22,29 +20,56 @@ interface NotificationsWidgetProps {
 
 export function NotificationsWidget({ user }: NotificationsWidgetProps) {
   const [showUnreadOnly, setShowUnreadOnly] = useState(true)
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  // Get notifications
-  const notifications = useQuery(
-    api.notifications.getUserNotifications,
-    user ? { 
-      userId: user.id, 
-      limit: 20, 
-      unreadOnly: showUnreadOnly 
-    } : 'skip'
-  )
+  // Fetch notifications from Neon API
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!user?.id) return
+      
+      try {
+        const response = await fetch(`/api/notifications?userId=${user.id}&limit=20&unreadOnly=${showUnreadOnly}`)
+        if (response.ok) {
+          const notifs = await response.json()
+          // Parse JSON data field
+          const parsedNotifs = notifs.map(notif => ({
+            ...notif,
+            data: typeof notif.data === 'string' ? JSON.parse(notif.data) : notif.data
+          }))
+          setNotifications(parsedNotifs)
+        }
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  // Mutations
-  const markAsRead = useMutation(api.notifications.markNotificationAsRead)
-  const markAllAsRead = useMutation(api.notifications.markAllNotificationsAsRead)
+    fetchNotifications()
+  }, [user?.id, showUnreadOnly])
 
   const handleMarkAsRead = async (notificationId: string) => {
     if (!user) return
     
     try {
-      await markAsRead({
-        notificationId: notificationId as any,
-        userId: user.id
+      const response = await fetch('/api/notifications/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notificationId,
+          userId: user.id
+        })
       })
+
+      if (response.ok) {
+        // Update local state
+        setNotifications(prev => prev.map(notif => 
+          notif.id === parseInt(notificationId) ? { ...notif, read: true, read_at: new Date() } : notif
+        ))
+      }
     } catch (error) {
       console.error('Failed to mark notification as read:', error)
     }
@@ -54,7 +79,23 @@ export function NotificationsWidget({ user }: NotificationsWidgetProps) {
     if (!user) return
     
     try {
-      await markAllAsRead({ userId: user.id })
+      const response = await fetch('/api/notifications/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          markAll: true
+        })
+      })
+
+      if (response.ok) {
+        // Update local state - mark all as read
+        setNotifications(prev => prev.map(notif => 
+          ({ ...notif, read: true, read_at: new Date() })
+        ))
+      }
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error)
     }
@@ -115,8 +156,9 @@ export function NotificationsWidget({ user }: NotificationsWidgetProps) {
     }
   }
 
-  const formatTime = (timestamp: number) => {
+  const formatTime = (createdAt: string) => {
     const now = Date.now()
+    const timestamp = new Date(createdAt).getTime()
     const diff = now - timestamp
     const minutes = Math.floor(diff / (1000 * 60))
     const hours = Math.floor(diff / (1000 * 60 * 60))
@@ -187,7 +229,7 @@ export function NotificationsWidget({ user }: NotificationsWidgetProps) {
           {notifications && notifications.length > 0 ? (
             notifications.map((notification: any) => (
               <div
-                key={notification._id}
+                key={notification.id}
                 className={`p-3 border rounded-lg ${
                   notification.read 
                     ? 'bg-white border-gray-200' 
@@ -207,7 +249,7 @@ export function NotificationsWidget({ user }: NotificationsWidgetProps) {
                           {getNotificationTitle(notification.event, notification.data)}
                         </h4>
                         <span className="text-xs text-gray-500 ml-2 whitespace-nowrap">
-                          {formatTime(notification.createdAt)}
+                          {formatTime(notification.created_at)}
                         </span>
                       </div>
                       <p className={`text-sm mt-1 ${
@@ -245,7 +287,7 @@ export function NotificationsWidget({ user }: NotificationsWidgetProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleMarkAsRead(notification._id)}
+                      onClick={() => handleMarkAsRead(notification.id)}
                       className="ml-2 p-1 h-6 w-6"
                     >
                       <X className="w-3 h-3" />

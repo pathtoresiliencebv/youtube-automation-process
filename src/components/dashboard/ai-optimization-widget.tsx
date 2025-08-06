@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery, useAction } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -33,33 +31,85 @@ export function AIOptimizationWidget({ user }: AIOptimizationWidgetProps) {
   const [optimizationInput, setOptimizationInput] = useState('')
   const [optimizationType, setOptimizationType] = useState<'video_idea' | 'title_optimization' | 'script_improvement'>('video_idea')
 
-  // Get latest content analysis
-  const contentAnalysis = useQuery(
-    api.aiOptimization.getLatestContentAnalysis,
-    user ? { userId: user.id } : 'skip'
-  )
+  const [contentAnalysis, setContentAnalysis] = useState(null)
+  const [optimizationHistory, setOptimizationHistory] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  // Get optimization history
-  const optimizationHistory = useQuery(
-    api.aiOptimization.getOptimizationHistory,
-    user ? { userId: user.id, limit: 5 } : 'skip'
-  )
+  // Fetch AI optimization data
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.id) return
+      
+      try {
+        // Fetch latest content analysis
+        const analysisResponse = await fetch(`/api/ai-optimization?userId=${user.id}&type=analysis`)
+        if (analysisResponse.ok) {
+          const analysis = await analysisResponse.json()
+          // Parse JSON fields
+          const analysisWithParsedResults = analysis ? {
+            ...analysis,
+            results: typeof analysis.results === 'string' ? JSON.parse(analysis.results) : analysis.results
+          } : null
+          setContentAnalysis(analysisWithParsedResults)
+        }
 
-  // Actions
-  const runAnalysis = useAction(api.aiOptimization.analyzeContentPerformance)
-  const generateOptimizedContent = useAction(api.aiOptimization.generateOptimizedContent)
+        // Fetch optimization history
+        const historyResponse = await fetch(`/api/ai-optimization?userId=${user.id}&type=optimization&limit=5`)
+        if (historyResponse.ok) {
+          const history = await historyResponse.json()
+          // Parse JSON fields in optimization history
+          const parsedHistory = history.map(opt => ({
+            ...opt,
+            improvements: typeof opt.improvements === 'string' ? JSON.parse(opt.improvements) : opt.improvements,
+            predicted_performance: typeof opt.predicted_performance === 'string' ? JSON.parse(opt.predicted_performance) : opt.predicted_performance
+          }))
+          setOptimizationHistory(parsedHistory)
+        }
+      } catch (error) {
+        console.error('Failed to fetch AI optimization data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [user?.id])
 
   const handleRunAnalysis = async () => {
     if (!user) return
     
     setIsAnalyzing(true)
     try {
-      await runAnalysis({
-        userId: user.id,
-        analysisType: selectedAnalysis
+      const response = await fetch('/api/ai-optimization', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          action: 'analyze',
+          data: { analysisType: selectedAnalysis }
+        })
       })
-      
-      alert('Content analyse voltooid! Bekijk de resultaten hieronder.')
+
+      if (response.ok) {
+        const result = await response.json()
+        
+        // Refresh content analysis
+        const analysisResponse = await fetch(`/api/ai-optimization?userId=${user.id}&type=analysis`)
+        if (analysisResponse.ok) {
+          const analysis = await analysisResponse.json()
+          const analysisWithParsedResults = analysis ? {
+            ...analysis,
+            results: typeof analysis.results === 'string' ? JSON.parse(analysis.results) : analysis.results
+          } : null
+          setContentAnalysis(analysisWithParsedResults)
+        }
+        
+        alert('Content analyse voltooid! Bekijk de resultaten hieronder.')
+      } else {
+        throw new Error('Analysis request failed')
+      }
     } catch (error) {
       console.error('Analysis failed:', error)
       alert('Er ging iets mis bij de analyse. Probeer het opnieuw.')
@@ -73,19 +123,39 @@ export function AIOptimizationWidget({ user }: AIOptimizationWidgetProps) {
     
     setIsOptimizing(true)
     try {
-      const result = await generateOptimizedContent({
-        userId: user.id,
-        contentType: optimizationType,
-        baseContent: optimizationInput,
-        targetMetrics: {
-          views: 10000,
-          engagement: 5,
-          watchTime: 45
-        }
+      const response = await fetch('/api/ai-optimization', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          action: 'optimize',
+          data: {
+            contentType: optimizationType,
+            baseContent: optimizationInput
+          }
+        })
       })
-      
-      alert('Content optimalisatie voltooid! Check de resultaten.')
-      setOptimizationInput('')
+
+      if (response.ok) {
+        // Refresh optimization history
+        const historyResponse = await fetch(`/api/ai-optimization?userId=${user.id}&type=optimization&limit=5`)
+        if (historyResponse.ok) {
+          const history = await historyResponse.json()
+          const parsedHistory = history.map(opt => ({
+            ...opt,
+            improvements: typeof opt.improvements === 'string' ? JSON.parse(opt.improvements) : opt.improvements,
+            predicted_performance: typeof opt.predicted_performance === 'string' ? JSON.parse(opt.predicted_performance) : opt.predicted_performance
+          }))
+          setOptimizationHistory(parsedHistory)
+        }
+        
+        alert('Content optimalisatie voltooid! Check de resultaten.')
+        setOptimizationInput('')
+      } else {
+        throw new Error('Optimization request failed')
+      }
     } catch (error) {
       console.error('Optimization failed:', error)
       alert('Er ging iets mis bij de optimalisatie. Probeer het opnieuw.')
@@ -251,8 +321,8 @@ export function AIOptimizationWidget({ user }: AIOptimizationWidgetProps) {
                 </div>
 
                 <div className="text-xs text-gray-500 text-center">
-                  Analyse gebaseerd op {contentAnalysis.dataPoints} video's • 
-                  {new Date(contentAnalysis.generatedAt).toLocaleDateString('nl-NL')}
+                  Analyse gebaseerd op {contentAnalysis.data_points} video's • 
+                  {new Date(contentAnalysis.created_at).toLocaleDateString('nl-NL')}
                 </div>
               </div>
             )}
@@ -326,21 +396,21 @@ export function AIOptimizationWidget({ user }: AIOptimizationWidgetProps) {
                 <h4 className="font-medium text-gray-700">Recente Optimalisaties</h4>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {optimizationHistory.map((opt: any) => (
-                    <div key={opt._id} className="p-3 bg-gray-50 rounded-lg">
+                    <div key={opt.id} className="p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium capitalize">
-                          {opt.contentType.replace('_', ' ')}
+                          {opt.content_type.replace('_', ' ')}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {new Date(opt.createdAt).toLocaleDateString('nl-NL')}
+                          {new Date(opt.created_at).toLocaleDateString('nl-NL')}
                         </span>
                       </div>
                       <div className="text-xs text-gray-600">
-                        {opt.improvements.slice(0, 2).join(' • ')}
+                        {opt.improvements?.slice(0, 2).join(' • ')}
                       </div>
-                      {opt.predictedPerformance && (
+                      {opt.predicted_performance && (
                         <div className="text-xs text-green-600 mt-1">
-                          Verwachte verbetering: {opt.predictedPerformance.expectedImprovement || '20-35%'}
+                          Verwachte verbetering: {opt.predicted_performance?.expectedImprovement || '20-35%'}
                         </div>
                       )}
                     </div>

@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AuthForm } from '@/components/auth/auth-form'
+import { SimpleAuthForm } from '@/components/auth/simple-auth-form'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { useRouter } from 'next/navigation'
 
 export default function HomePage() {
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     checkAuthAndErrors()
@@ -37,14 +39,34 @@ export default function HomePage() {
       return
     }
 
-    // Check for existing authentication
+    // Small delay to ensure client-side hydration
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // Check for existing authentication in localStorage first
+    try {
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        const userData = JSON.parse(storedUser)
+        if (userData && userData.id) {
+          console.log('Found user in localStorage:', userData)
+          // User is authenticated, redirect to dashboard
+          router.push('/dashboard')
+          return
+        }
+      }
+    } catch (error) {
+      console.error('localStorage check failed:', error)
+    }
+
+    // Check server-side authentication as fallback
     try {
       const response = await fetch('/api/auth/me')
       if (response.ok) {
         const userData = await response.json()
-        if (userData.id) {
+        if (userData && userData.id) {
+          console.log('Found user via API:', userData)
           // User is authenticated, redirect to dashboard
-          window.location.href = '/dashboard'
+          router.push('/dashboard')
           return
         }
       }
@@ -52,7 +74,14 @@ export default function HomePage() {
       console.error('Auth check failed:', error)
     }
 
+    // No authentication found, show login form
+    console.log('No authentication found, showing login form')
     setIsLoading(false)
+  }
+
+  const handleAuthSuccess = (userData: any) => {
+    setUser(userData)
+    router.push('/dashboard')
   }
 
   if (isLoading) {
@@ -61,6 +90,7 @@ export default function HomePage() {
         <div className="text-center">
           <LoadingSpinner />
           <p className="mt-4 text-gray-600">🤖 Starting YouTube Automation System...</p>
+          <p className="mt-2 text-sm text-gray-500">Checking authentication...</p>
         </div>
       </div>
     )
@@ -78,7 +108,7 @@ export default function HomePage() {
             </div>
           </div>
         )}
-        <AuthForm />
+        <SimpleAuthForm onAuthSuccess={handleAuthSuccess} />
       </div>
     </div>
   )

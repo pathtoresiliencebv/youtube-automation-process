@@ -1,7 +1,6 @@
 'use client'
 
-import { useQuery } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { getStatusColor, getStatusText, formatDate } from '@/lib/utils'
@@ -22,17 +21,50 @@ interface ProductionPipelineWidgetProps {
 }
 
 export function ProductionPipelineWidget({ user }: ProductionPipelineWidgetProps) {
-  const videoIdeas = useQuery(
-    api.content.getVideoIdeasByUser,
-    user ? { userId: user.id } : 'skip'
-  )
+  const [videoIdeas, setVideoIdeas] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  // Filter ideas that are in production (not pending approval or published)
-  const inProduction = videoIdeas?.filter(idea => 
-    !['pending_approval', 'rejected', 'published'].includes(idea.status)
-  ) || []
+  // Fetch video ideas in production from Neon API
+  useEffect(() => {
+    const fetchInProductionIdeas = async () => {
+      if (!user?.id) return
+      
+      try {
+        const response = await fetch(`/api/video-ideas?userId=${user.id}`)
+        if (response.ok) {
+          const allIdeas = await response.json()
+          // Filter ideas that are in production (not pending approval or published)
+          const inProd = allIdeas.filter(idea => 
+            !['pending_approval', 'rejected', 'published'].includes(idea.status)
+          )
+          setVideoIdeas(inProd)
+        }
+      } catch (error) {
+        console.error('Failed to fetch production pipeline:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchInProductionIdeas()
+  }, [user?.id])
+
+  const inProduction = videoIdeas
 
   if (!user) {
+    return (
+      <Card className="h-96">
+        <CardHeader>
+          <CardTitle>Productie Pijplijn</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Geen gebruiker ingelogd</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (loading) {
     return (
       <Card className="h-96">
         <CardHeader>

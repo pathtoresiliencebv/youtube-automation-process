@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ConvexHttpClient } from 'convex/browser'
-import { api } from '../../../../../convex/_generated/api'
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!, {
-  skipConvexDeploymentUrlCheck: true
-})
+import { Client } from 'pg'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,61 +15,93 @@ export async function POST(request: NextRequest) {
 
     let result;
 
-    switch (action) {
-      case 'cleanup-logs':
-        const olderThanDays = params.olderThanDays || 30
-        result = await convex.action(api.admin.cleanupOldLogs, {
-          olderThanDays,
-          adminUserId: adminUserId as any,
-        })
-        break
+    const client = new Client({
+      connectionString: process.env.DATABASE_URL,
+    })
 
-      case 'database-stats':
-        result = await convex.query(api.admin.getSystemResourceUsage, {})
-        break
+    await client.connect()
 
-      case 'user-activity':
-        result = await convex.query(api.admin.getUserActivity, {
-          timeRange: params.timeRange || '24h',
-          limit: params.limit || 20
-        })
-        break
-
-      case 'restart-services':
-        // Simulate service restart (in a real app, you'd implement actual service management)
-        result = {
-          success: true,
-          message: 'Service restart initiated',
-          services: ['convex', 'api-server', 'cron-jobs'],
-          timestamp: Date.now()
-        }
-        break
-
-      case 'system-config':
-        // Get system configuration
-        result = {
-          environment: process.env.NODE_ENV,
-          version: '1.0.0',
-          services: {
-            convex: !!process.env.NEXT_PUBLIC_CONVEX_URL,
-            postgres: !!process.env.DATABASE_URL,
-            gemini: !!process.env.GEMINI_API_KEY,
-            revid: !!process.env.REVID_API_KEY,
-            youtube: !!process.env.YOUTUBE_CLIENT_SECRET,
-          },
-          features: {
-            bulkOperations: true,
-            analytics: true,
-            adminPanel: true,
-            errorRecovery: true,
+    try {
+      switch (action) {
+        case 'cleanup-logs':
+          const olderThanDays = params.olderThanDays || 30
+          const cleanupResult = await client.query(
+            `DELETE FROM system_logs WHERE created_at < NOW() - INTERVAL '${olderThanDays} days'`
+          )
+          result = {
+            deletedRows: cleanupResult.rowCount || 0,
+            olderThanDays
           }
-        }
-        break
+          break
 
-      default:
-        return NextResponse.json({
-          error: 'Invalid action. Supported: cleanup-logs, database-stats, user-activity, restart-services, system-config'
-        }, { status: 400 })
+        case 'database-stats':
+          const statsResult = await client.query(`
+            SELECT 
+              (SELECT COUNT(*) FROM users) as total_users,
+              (SELECT COUNT(*) FROM video_ideas) as total_video_ideas,
+              (SELECT COUNT(*) FROM notifications) as total_notifications,
+              (SELECT COUNT(*) FROM system_logs) as total_logs
+          `)
+          result = statsResult.rows[0]
+          break
+
+        case 'user-activity':
+          const timeRange = params.timeRange || '24h'
+          let interval = '24 hours'
+          switch (timeRange) {
+            case '1h': interval = '1 hour'; break
+            case '7d': interval = '7 days'; break
+            case '30d': interval = '30 days'; break
+          }
+          
+          const activityResult = await client.query(`
+            SELECT user_id, COUNT(*) as activity_count, MAX(created_at) as last_activity
+            FROM system_logs 
+            WHERE created_at >= NOW() - INTERVAL '${interval}'
+            GROUP BY user_id 
+            ORDER BY activity_count DESC 
+            LIMIT ${params.limit || 20}
+          `)
+          result = activityResult.rows
+          break
+
+        case 'restart-services':
+          // Simulate service restart (in a real app, you'd implement actual service management)
+          result = {
+            success: true,
+            message: 'Service restart initiated',
+            services: ['postgres', 'api-server', 'cron-jobs'],
+            timestamp: Date.now()
+          }
+          break
+
+        case 'system-config':
+          // Get system configuration
+          result = {
+            environment: process.env.NODE_ENV,
+            version: '1.0.0',
+            services: {
+              postgres: !!process.env.DATABASE_URL,
+              gemini: !!process.env.GEMINI_API_KEY,
+              revid: !!process.env.REVID_API_KEY,
+              youtube: !!process.env.YOUTUBE_CLIENT_SECRET,
+            },
+            features: {
+              bulkOperations: true,
+              analytics: true,
+              adminPanel: true,
+              errorRecovery: true,
+            }
+          }
+          break
+
+        default:
+          return NextResponse.json({
+            error: 'Invalid action. Supported: cleanup-logs, database-stats, user-activity, restart-services, system-config'
+          }, { status: 400 })
+      }
+    } finally {
+      await client.end()
     }
 
     return NextResponse.json({

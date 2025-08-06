@@ -13,11 +13,11 @@ interface YouTubeConnectWidgetProps {
 export function YouTubeConnectWidget({ user, onConnectionUpdate }: YouTubeConnectWidgetProps) {
   const [isConnecting, setIsConnecting] = useState(false)
   
-  // Check if user is already connected (has channelId from OAuth)
-  const isConnected = user?.channelId && user?.youtubeConnected
+  // Check if user is already connected (has YouTube channel data)
+  const isConnected = user?.youtubeChannelId && user?.youtubeConnected
 
   const handleAnalyzeChannel = async () => {
-    if (!user?.channelId) return
+    if (!user?.youtubeChannelId) return
     
     setIsConnecting(true)
     try {
@@ -28,7 +28,7 @@ export function YouTubeConnectWidget({ user, onConnectionUpdate }: YouTubeConnec
         },
         body: JSON.stringify({
           userId: user.id,
-          channelId: user.channelId
+          channelId: user.youtubeChannelId
         })
       })
 
@@ -47,18 +47,18 @@ export function YouTubeConnectWidget({ user, onConnectionUpdate }: YouTubeConnec
     }
   }
 
-  const handleReconnect = () => {
+  const handleYouTubeConnect = () => {
     const clientId = process.env.NEXT_PUBLIC_YOUTUBE_CLIENT_ID
     
     if (!clientId || clientId === 'your-actual-youtube-client-id') {
-      alert('YouTube Client ID is nog niet geconfigureerd.')
+      alert('YouTube Client ID is nog niet geconfigureerd. Stel eerst de environment variables in.')
       return
     }
     
     setIsConnecting(true)
     
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-    const redirectUri = `${appUrl}/auth/callback`
+    const redirectUri = `${appUrl}/api/auth/callback`
     const scope = 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/yt-analytics.readonly'
     
     const authUrl = `https://accounts.google.com/o/oauth2/auth?` +
@@ -88,11 +88,11 @@ export function YouTubeConnectWidget({ user, onConnectionUpdate }: YouTubeConnec
               <div>
                 <div className="font-semibold text-green-800">Verbonden</div>
                 <div className="text-sm text-green-700">
-                  {user.channelName || user.name}
+                  {user.youtubeChannelTitle || user.name}
                 </div>
-                {user.channelId && (
+                {user.youtubeChannelId && (
                   <div className="text-xs text-green-600 mt-1">
-                    ID: {user.channelId}
+                    ID: {user.youtubeChannelId}
                   </div>
                 )}
               </div>
@@ -111,7 +111,7 @@ export function YouTubeConnectWidget({ user, onConnectionUpdate }: YouTubeConnec
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleReconnect}
+                onClick={handleYouTubeConnect}
                 className="text-gray-600"
               >
                 Herverbinden
@@ -120,23 +120,23 @@ export function YouTubeConnectWidget({ user, onConnectionUpdate }: YouTubeConnec
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-orange-600" />
+            <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <Youtube className="w-5 h-5 text-blue-600" />
               <div>
-                <div className="font-semibold text-orange-800">Niet volledig verbonden</div>
-                <div className="text-sm text-orange-700">
-                  Log opnieuw in om YouTube toegang te activeren
+                <div className="font-semibold text-blue-800">YouTube Kanaal Koppelen</div>
+                <div className="text-sm text-blue-700">
+                  Koppel je YouTube kanaal om video's te kunnen analyseren en automatisch content te genereren
                 </div>
               </div>
             </div>
             
             <Button
-              onClick={handleReconnect}
+              onClick={handleYouTubeConnect}
               disabled={isConnecting}
               className="w-full bg-red-600 hover:bg-red-700"
             >
               <Youtube className="w-4 h-4 mr-2" />
-              {isConnecting ? 'Verbinden...' : 'Verbind YouTube Kanaal'}
+              {isConnecting ? 'Verbinden...' : 'Koppel YouTube Kanaal'}
             </Button>
           </div>
         )}

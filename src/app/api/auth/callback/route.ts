@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/?error=no_channel', request.nextUrl.origin));
     }
 
-    // Update stored user with YouTube channel info
-    const redirectUrl = new URL('/', request.nextUrl.origin);
+    // Redirect to callback page with channel info
+    const redirectUrl = new URL('/auth/callback', request.nextUrl.origin);
     redirectUrl.searchParams.set('youtube_success', 'true');
     redirectUrl.searchParams.set('channel_id', channel.id!);
     redirectUrl.searchParams.set('channel_name', channel.snippet?.title || '');
