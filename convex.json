@@ -1,6 +1,6 @@
 {
   "project": "content-catalyst-engine",
-  "prodUrl": "",
+  "prodUrl": "https://bright-dodo-455.convex.cloud",
   "functions": "convex/",
   "generateCommonJSApi": false,
   "node": {
